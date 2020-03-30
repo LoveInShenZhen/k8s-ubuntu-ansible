@@ -1,0 +1,150 @@
+---
+# tasks file for k8s_node
+
+# 加载共有变量
+- import_role:
+    name: common
+
+- name: add 电信 dns
+  blockinfile:
+    path: /etc/resolv.conf
+    block: |
+      nameserver 202.96.134.133
+    state: present
+
+- name: PermitRootLogin
+  blockinfile:
+    path: /etc/ssh/sshd_config
+    block: |
+      PermitRootLogin yes
+    state: present
+  notify: restart ssh service
+
+- name: disable swapoff now
+  shell: swapoff -a
+      
+- name: disable swapoff permanently
+  replace:
+    path: /etc/fstab
+    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+    replace: '#\1\2\3swap\4'
+    backup: yes
+  
+- name: "disable ufw [Uncomplicated Firewall]"
+  service:
+    name: ufw
+    enabled: no
+    state: stopped
+
+- name: setup hostname
+  hostname:
+    name: "{{ host_name }}" 
+
+- name: change to aliyun source
+  copy: 
+    src: aliyun.ubuntu.1804.source.list 
+    dest: /etc/apt/sources.list 
+    mode: u=rw,g=r,o=r
+
+- name: install dependence pkgs
+  apt:
+    update_cache: yes
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - software-properties-common
+      - curl
+      - gnupg-agent
+      - python3-pip
+      - iptables
+      - ntpdate
+    state: present
+
+- name: setup timezone
+  timezone:
+    hwclock: UTC
+    name: Asia/Shanghai
+  
+- name: setup ntpdate cron task
+  cron:
+    name: ntpdate sync time daily
+    job: "ntpdate {{ ntpdate_server }}"
+    day: "*"
+    hour: "3"
+    minute: "0"
+  notify: ntpdate sync time now
+
+  # ref: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E7%A1%AE%E4%BF%9D-iptables-%E5%B7%A5%E5%85%B7%E4%B8%8D%E4%BD%BF%E7%94%A8-nftables-%E5%90%8E%E7%AB%AF
+- name: remove nftables
+  apt:
+    pkg:
+      - nftables
+    state: absent
+
+- name: add docker-ce GPG key
+  apt_key:
+    url: "{{ apt.docker.apt_key_url }}"
+    state: present
+
+- name: add docker-ce APT repository
+  apt_repository:
+    repo: "deb [arch=amd64] {{ apt.docker.apt_repository }} {{ ansible_lsb.codename }} stable"
+
+- name: add k8s GPG key
+  apt_key:
+    url: "{{ apt.k8s.apt_key_url }}"
+    state: present
+
+- name: add k8s APT repository
+  apt_repository:
+    repo: "deb {{ apt.k8s.apt_repository }} kubernetes-xenial main"
+
+- name: check if docker installed
+  stat:
+    path: /usr/bin/docker
+  register: check_docker
+
+- name: check if kubelet installed
+  stat:
+    path: /usr/bin/kubelet
+  register: check_kubelet
+
+- name: update apt cache
+  apt:
+    update_cache: yes
+  when: check_docker.stat.exists == False or check_kubelet.stat.exists == False
+
+- name: install docker-ce pkg
+  apt:
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+
+- name: setup /etc/docker/daemon.json
+  json_patch:
+    src: "/etc/docker/daemon.json"
+    create: yes
+    create_type: object
+    pretty: yes
+    operations:
+      - op: add
+        path: "/registry-mirrors"
+        value: ["https://dockerhub.azk8s.cn"]
+      - op: add
+        path: "/exec-opts"
+        value: ["native.cgroupdriver=systemd"]
+  notify: restart docker service
+
+- name: setup /etc/sysctl.d/k8s.conf
+  copy:
+    src: sysctl.d.k8s.conf
+    dest: /etc/sysctl.d/k8s.conf
+  notify: load /etc/sysctl.d/k8s.conf
+
+- name: install k8s pkgs
+  apt:
+    pkg:
+      - kubelet 
+      - kubeadm 
+      - kubectl

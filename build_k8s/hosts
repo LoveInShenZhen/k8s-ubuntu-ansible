@@ -1,0 +1,29 @@
+# 主机清单文件参考: http://ansible.com.cn/docs/intro_inventory.html
+[nodes:children]
+master
+worker
+
+[master:children]
+first_master
+other_master
+
+# 创建集群时的第一个 Master
+[first_master]
+192.168.3.151 host_name=master-1
+
+# 需要加入到现有集群的其他 Master
+[other_master]
+# 192.168.3.152 host_name=master-2
+# 192.168.3.153 host_name=master-3
+
+[worker]
+192.168.3.154 host_name=work-1
+
+[all:vars]
+ansible_ssh_user=root
+ansible_ssh_private_key_file=/Users/kk/.ssh/id_rsa
+ansible_python_interpreter=/usr/bin/python3
+# ansible_become=yes
+# ansible_become_user=root
+# ansible_become_pass=vagrant
+# Ansible特权提升: http://ansible.com.cn/docs/become.html?highlight=become

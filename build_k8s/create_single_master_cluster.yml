@@ -1,0 +1,47 @@
+---
+- hosts: first_master
+  tasks:
+    # 加载共有变量
+    - import_role:
+        name: common
+
+    - name: setup control_plane_dns in /etc/hosts
+      script: "scripts/EtcHosts.py --ip 127.0.0.1 --host {{ k8s.control_plane_dns }} --state present"
+    
+    # ref: https://kubernetes.io/zh/docs/reference/setup-tools/kubeadm/kubeadm-init/
+    - name: kubeadm init
+      command:
+        argv:
+          - kubeadm
+          - init
+          - "--apiserver-advertise-address"
+          - "{{ ansible_host }}"
+          - "--apiserver-bind-port"
+          - "{{ k8s.apiserver_bind_port }}"
+          - "--control-plane-endpoint"
+          - "{{ k8s.control_plane_dns }}:{{ k8s.control_plane_port }}"
+          - "--image-repository"
+          - "{{ k8s.image_repository }}"
+          - "--node-name"
+          - "{{ host_name }}"
+          - "--pod-network-cidr"
+          - "{{ k8s.pod_network_cidr }}"
+          - "--service-cidr"
+          - "{{ k8s.service_cidr }}"
+          - "--service-dns-domain"
+          - "{{ k8s.service_dns_domain }}"
+          
+    - name: copy calico.yaml to master
+      template:
+        src: calico.yaml.j2
+        dest: /tmp/calico.yaml
+    
+    - name: setup kubectl env
+      script: scripts/setup_kubectl_env.sh
+    
+    - name: install calico pod network add-on
+      command: kubectl apply -f /tmp/calico.yaml
+
+        
+
+        

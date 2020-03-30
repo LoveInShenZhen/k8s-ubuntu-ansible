@@ -1,0 +1,6 @@
+---
+# playbook 参考: http://ansible.com.cn/docs/playbooks.html
+- hosts: nodes
+  # gather_facts: no
+  roles:
+    - k8s_node

@@ -1,0 +1,35 @@
+---
+- hosts: worker
+  tasks:
+    # 加载共有变量
+    - import_role:
+        name: common
+    - debug:
+        msg: "{{ first_master }}"
+    - name: setup control_plane_dns in /etc/hosts
+      hosts_file:
+        ip: 172.16.3.11
+        # host: my.api.server3
+        state: 'absent'
+    # - name: setup control_plane_dns in /etc/hosts
+    #   script: scripts/EtcHosts.py --ip {{  }} --host {{ k8s.control_plane_dns }} --state present
+
+# - hosts: master
+#   tasks:
+#     # - name: manage yaml files
+#     #   yedit:
+#     #     src: /root/kubeadm.conf
+#     #     key: object_1.imageRepository
+#     #     value: registry.cn-beijing.aliyuncs.com/imcto
+#     - import_role:
+#         name: common
+#     - debug:
+#         msg: "ip : {{ ansible_host }}"
+#     - debug:
+#         msg: "master_count : {{ master_count }}"
+#     - debug:
+#         msg: "单节点: {{ single_master }}"
+#     - debug:
+#         msg: "节点名称: {{ host_name }}"
+#     - debug:
+#         msg: "{{ first_master }}"

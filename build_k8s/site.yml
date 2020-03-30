@@ -1,0 +1,5 @@
+---
+# playbook 参考: http://ansible.com.cn/docs/playbooks.html
+- hosts: nodes
+  roles:
+    - k8s_node

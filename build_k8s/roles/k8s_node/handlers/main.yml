@@ -1,0 +1,17 @@
+---
+# handlers file for k8s_node
+- name: restart docker service
+  service:
+    name: docker
+    state: restarted
+
+- name: restart ssh service
+  service:
+    name: ssh
+    state: restarted
+
+- name: load /etc/sysctl.d/k8s.conf
+  command: sysctl -p /etc/sysctl.d/k8s.conf
+
+- name: ntpdate sync time now
+  command: "ntpdate {{ ntpdate_server }}"

@@ -1,0 +1,4 @@
+---
+# tasks file for master_node
+- import_role:
+    name: common

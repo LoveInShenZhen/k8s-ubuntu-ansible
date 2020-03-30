@@ -1,4 +1,0 @@
----
-- hosts: nodes
-  roles:
-    - k8s_node

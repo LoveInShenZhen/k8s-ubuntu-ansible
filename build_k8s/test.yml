@@ -1,35 +1,44 @@
 ---
-- hosts: worker
+- hosts: first_master
   tasks:
-    # 加载共有变量
-    - import_role:
-        name: common
-    - debug:
-        msg: "{{ first_master }}"
-    - name: setup control_plane_dns in /etc/hosts
-      hosts_file:
-        ip: 172.16.3.11
-        # host: my.api.server3
-        state: 'absent'
-    # - name: setup control_plane_dns in /etc/hosts
-    #   script: scripts/EtcHosts.py --ip {{  }} --host {{ k8s.control_plane_dns }} --state present
+    - name: get k8s node names
+      k8s_nodes:
+        save_to: /tmp/k8s_node_names.json
+    # - debug:
+    #     msg: "{{ k8s_node_names }}"
 
-# - hosts: master
+    - name: fetch /tmp/k8s_node_names.json to local
+      synchronize:
+        mode: pull
+        src: /tmp/k8s_node_names.json
+        dest: /tmp/k8s_node_names.json
+
+    - name: print join cmd
+      k8s_print_join_cmd:
+        save_to: /tmp/k8s_join_cmd.json
+
+    - name: fetch /tmp/k8s_join_cmd.json to local
+      synchronize:
+        mode: pull
+        src: /tmp/k8s_join_cmd.json
+        dest: /tmp/k8s_join_cmd.json
+    
+    - debug:
+        msg: "worker: {{ k8s_worker_join_cmd }}"
+    - debug:
+        msg: "master: {{ k8s_master_join_cmd }}"
+
+# - hosts: nodes
 #   tasks:
-#     # - name: manage yaml files
-#     #   yedit:
-#     #     src: /root/kubeadm.conf
-#     #     key: object_1.imageRepository
-#     #     value: registry.cn-beijing.aliyuncs.com/imcto
-#     - import_role:
-#         name: common
+#     - name: push local k8s_node_names to target host
+#       copy:
+#         src: /tmp/k8s_node_names.json
+#         dest: /tmp/k8s_node_names.json
+#     - name: load facts from file
+#       load_json:
+#         path: /tmp/k8s_node_names.json
 #     - debug:
-#         msg: "ip : {{ ansible_host }}"
+#         msg: "{{ host_name }} knows : {{ k8s_node_names }}"
 #     - debug:
-#         msg: "master_count : {{ master_count }}"
-#     - debug:
-#         msg: "单节点: {{ single_master }}"
-#     - debug:
-#         msg: "节点名称: {{ host_name }}"
-#     - debug:
-#         msg: "{{ first_master }}"
+#         msg: "i am {{ host_name }}, and i am not in cluster."
+#       when: host_name not in k8s_node_names

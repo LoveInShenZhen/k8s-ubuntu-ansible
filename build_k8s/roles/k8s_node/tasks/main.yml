@@ -5,12 +5,16 @@
 - import_role:
     name: common
 
+# 参考: https://blog.csdn.net/weixin_43640082/article/details/83859885
 - name: add 电信 dns
   blockinfile:
-    path: /etc/resolv.conf
+    path: /etc/systemd/resolved.conf
+    backup: yes
+    insertafter: "\\[Resolve\\]"
     block: |
-      nameserver 202.96.134.133
+      DNS=202.96.134.133
     state: present
+  notify: restart systemd-resolved service
 
 - name: PermitRootLogin
   blockinfile:
@@ -20,8 +24,12 @@
     state: present
   notify: restart ssh service
 
+- name: gathering swap state
+  swap_state:
+
 - name: disable swapoff now
   shell: swapoff -a
+  when: host_swap_on == True
       
 - name: disable swapoff permanently
   replace:

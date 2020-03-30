@@ -209,7 +209,7 @@ def main():
         argument_spec = dict(
             ip = dict(default = ''),
             host = dict(default = ''),
-            state = dict(required = True, choices = ['present', 'absent'])
+            state = dict(required = True, choices = ['present', 'absent', 'replace'])
         )
     )
 
@@ -221,8 +221,13 @@ def main():
         etc_file = EtcHostsFile()
         if state == 'present':
             etc_file.append(ip, host)
-        else:
+        elif state == 'absent':
             etc_file.remove(ip, host)
+        else:
+            # replace
+            etc_file.remove_host(host)
+            etc_file.append(ip, host)
+
         etc_file.save()
 
         module.exit_json(changed = etc_file.changed)

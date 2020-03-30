@@ -13,11 +13,15 @@ other_master
 
 # 需要加入到现有集群的其他 Master
 [other_master]
-# 192.168.3.152 host_name=master-2
+192.168.3.152 host_name=master-2
 # 192.168.3.153 host_name=master-3
 
 [worker]
 192.168.3.154 host_name=work-1
+
+[test_host]
+192.168.3.154 host_name=work-1
+192.168.3.151 host_name=master-1
 
 [all:vars]
 ansible_ssh_user=root

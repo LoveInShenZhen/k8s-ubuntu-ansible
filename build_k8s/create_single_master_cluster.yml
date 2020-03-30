@@ -1,15 +1,32 @@
 ---
-- hosts: first_master
+# 初始化所有节点, 安装依赖软件包, 修改配置
+  - hosts: nodes
+  # gather_facts: no
+    roles:
+      - k8s_node
+
+# 将控制平面的域名统一解析到 first_master 身上
+- hosts: nodes
   tasks:
     # 加载共有变量
     - import_role:
         name: common
 
-    - name: setup control_plane_dns in /etc/hosts
-      script: "scripts/EtcHosts.py --ip 127.0.0.1 --host {{ k8s.control_plane_dns }} --state present"
+    - name: 将控制平面的域名统一解析到 first_master 身上
+      host_file:
+        ip: "{{ first_master }}"
+        host: "{{ k8s.control_plane_dns }}"
+        state: replace
+
+# 创建集群第一个master节点
+- hosts: first_master
+  tasks:
+    # 加载共有变量
+    - import_role:
+        name: common
     
     # ref: https://kubernetes.io/zh/docs/reference/setup-tools/kubeadm/kubeadm-init/
-    - name: kubeadm init
+    - name: create the first master node
       command:
         argv:
           - kubeadm
@@ -41,7 +58,52 @@
     
     - name: install calico pod network add-on
       command: kubectl apply -f /tmp/calico.yaml
+    
+    - name: get the cluster join cmd
+      k8s_print_join_cmd:
+        save_to: /tmp/k8s_join_cmd.json
 
-        
+    - name: fetch /tmp/k8s_join_cmd.json to local
+      synchronize:
+        mode: pull
+        src: /tmp/k8s_join_cmd.json
+        dest: /tmp/k8s_join_cmd.json
 
-        
+# 添加其他 master 节点到集群
+- hosts: other_master        
+  tasks:
+    - name: push local k8s_join_cmd.json to target host
+      copy:
+        src: /tmp/k8s_join_cmd.json
+        dest: /tmp/k8s_join_cmd.json
+
+    - name: load k8s_join_cmd to facts
+      load_json:
+        path: /tmp/k8s_join_cmd.json
+    # k8s_master_join_cmd like this:
+    # kubeadm join k8s.cluster.local:6443 --token mdjtnj.ewrwatcff3tluml2 --discovery-token-ca-cert-hash sha256:00545ed6985a015f84cd9b878e6dc21f24683501b0379cefd2909647cfe7cfe4 --control-plane --certificate-key af8f391c0c4d849710539766514a9627039951e2d2793df92e7a68985e307051
+
+    # https://kubernetes.io/zh/docs/reference/setup-tools/kubeadm/kubeadm-join/
+    - name: new master join to cluster
+      command:
+        cmd: "{{ k8s_master_join_cmd }} --apiserver-advertise-address {{ ansible_host }} --apiserver-bind-port {{ k8s.apiserver_bind_port }} --node-name {{ host_name }}"
+    
+    - name: setup kubectl env
+      script: scripts/setup_kubectl_env.sh       
+
+- hosts: worker
+  tasks:
+    - name: push local k8s_join_cmd.json to target host
+      copy:
+        src: /tmp/k8s_join_cmd.json
+        dest: /tmp/k8s_join_cmd.json
+
+    - name: load k8s_join_cmd to facts
+      load_json:
+        path: /tmp/k8s_join_cmd.json
+    # k8s_worker_join_cmd like this:
+    # kubeadm join k8s.cluster.local:6443 --token mdjtnj.ewrwatcff3tluml2 --discovery-token-ca-cert-hash sha256:00545ed6985a015f84cd9b878e6dc21f24683501b0379cefd2909647cfe7cfe4
+
+    - name: new worker join to cluster
+      command:
+        cmd: "{{ k8s_worker_join_cmd }} --node-name {{ host_name }}"

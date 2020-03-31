@@ -1,32 +1,28 @@
 ---
 - hosts: first_master
   tasks:
-    - name: get k8s node names
-      k8s_nodes:
-        save_to: /tmp/k8s_node_names.json
-    # - debug:
-    #     msg: "{{ k8s_node_names }}"
-
-    - name: fetch /tmp/k8s_node_names.json to local
-      synchronize:
-        mode: pull
-        src: /tmp/k8s_node_names.json
-        dest: /tmp/k8s_node_names.json
-
-    - name: print join cmd
-      k8s_print_join_cmd:
-        save_to: /tmp/k8s_join_cmd.json
-
-    - name: fetch /tmp/k8s_join_cmd.json to local
-      synchronize:
-        mode: pull
-        src: /tmp/k8s_join_cmd.json
-        dest: /tmp/k8s_join_cmd.json
+    - include_role:
+        name: add_other_master
+# - name: Get cluster nodes names
+#   hosts: first_master
+#   tasks:
+#     - include_role:
+#         name: get_cluster_node_names
     
-    - debug:
-        msg: "worker: {{ k8s_worker_join_cmd }}"
-    - debug:
-        msg: "master: {{ k8s_master_join_cmd }}"
+    # - name: print join cmd
+    #   k8s_print_join_cmd:
+    #     save_to: /tmp/k8s_join_cmd.json
+
+    # - name: fetch /tmp/k8s_join_cmd.json to local
+    #   synchronize:
+    #     mode: pull
+    #     src: /tmp/k8s_join_cmd.json
+    #     dest: /tmp/k8s_join_cmd.json
+    
+    # - debug:
+    #     msg: "worker: {{ k8s_worker_join_cmd }}"
+    # - debug:
+    #     msg: "master: {{ k8s_master_join_cmd }}"
 
 # - hosts: nodes
 #   tasks:

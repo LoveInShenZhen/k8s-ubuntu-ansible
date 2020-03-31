@@ -1,0 +1,28 @@
+---
+- name: Get cluster nodes names and join command
+  hosts: first_master
+  tasks:
+    - include_role:
+        name: get_cluster_node_names
+
+    - name: get the cluster join cmd from master
+      k8s_print_join_cmd:
+        save_to: /tmp/k8s_join_cmd.json
+      
+    - name: save cmd to local /tmp/k8s_join_cmd.json
+      synchronize:
+        mode: pull
+        src: /tmp/k8s_join_cmd.json
+        dest: /tmp/k8s_join_cmd.json
+
+- name: Add other master to cluster
+  hosts: other_master
+  tasks:
+    - include_role:
+        name: add_other_master
+
+- name: Add other workers to cluster
+  hosts: worker
+  tasks:
+    - include_role:
+        name: add_worker

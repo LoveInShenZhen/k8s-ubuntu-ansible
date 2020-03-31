@@ -23,7 +23,11 @@ def main():
     # Return Values ref: https://docs.ansible.com/ansible/latest/reference_appendices/common_return_values.html#common-return-values
     result = dict(
         changed = False,
-        ansible_facts = {}
+        ansible_facts = {
+            "k8s_node_names": [],
+            "k8s_cluster_created": False
+        },
+        msg = ''
     )
 
     # the AnsibleModule object will be our abstraction working with Ansible
@@ -40,14 +44,21 @@ def main():
     cmd_result = module.run_command(cmd)
 
     if cmd_result[0] != 0:
-        module.fail_json(msg = cmd_result[2])
+        # 命令执行失败
+        module.fail_json(msg=f'kubectl get nodes faild. [{cmd_result[2].strip()}]')
         return
     else:
+        # 命令执行成功
         info = json.loads(cmd_result[1])
         node_names = [node['metadata']['name'] for node in info['items']]
-        result['ansible_facts'] = dict(k8s_node_names = node_names)
+        result['ansible_facts'] = {
+            "k8s_node_names": node_names,
+            # 集群里至少包含一个节点, 集群才算作是已经创建
+            "k8s_cluster_created": len(node_names) > 0
+        }
 
         if save_to != '':
+            # 保存结果到指定的文件
             with open(save_to, 'w') as f:
                 f.write(json.dumps(result['ansible_facts'], indent = '  '))
 

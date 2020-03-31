@@ -23,7 +23,10 @@ def main():
     # Return Values ref: https://docs.ansible.com/ansible/latest/reference_appendices/common_return_values.html#common-return-values
     result = dict(
         changed = False,
-        ansible_facts = {}
+        ansible_facts = {
+            'k8s_worker_join_cmd': '',
+            'k8s_master_join_cmd': ''
+        }
     )
 
     module = AnsibleModule(
@@ -52,7 +55,10 @@ def main():
     certificate_key = cmd_result[1].strip().split('\n')[-1]
     master_join_cmd = f'{worker_join_cmd} --control-plane --certificate-key {certificate_key}'
 
-    result['ansible_facts'] = dict(k8s_worker_join_cmd = worker_join_cmd, k8s_master_join_cmd = master_join_cmd)
+    result['ansible_facts'] = {
+        'k8s_worker_join_cmd': worker_join_cmd,
+        'k8s_master_join_cmd': master_join_cmd
+    }
 
     if save_to != '':
         with open(save_to, 'w') as f:

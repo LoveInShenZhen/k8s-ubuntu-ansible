@@ -1,0 +1,19 @@
+---
+# tasks file for add_worker
+# 加载共有变量
+- import_role:
+    name: common
+
+- name: push local k8s_node_names to target host
+  copy:
+    src: /tmp/k8s_node_names.json
+    dest: /tmp/k8s_node_names.json
+
+- name: load k8s_node_names to facts
+  load_json:
+    path: /tmp/k8s_node_names.json
+
+- name: Only new host can add to cluster
+  include_tasks:
+    file: do_add_worker.yml
+  when: host_name not in k8s_node_names

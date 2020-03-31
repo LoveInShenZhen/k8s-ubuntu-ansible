@@ -1,0 +1,21 @@
+---
+# tasks file for get_cluster_node_names
+- name: Get cluster node names
+  k8s_nodes:
+    save_to: /tmp/k8s_node_names.json
+
+- debug:
+    msg:
+        - "cluster_created: {{ k8s_cluster_created }}"
+        - "names: {{ k8s_node_names }}"
+
+- name: Check whether the cluster has been created
+  fail:
+    msg: The cluster has not been created yet
+  when: k8s_cluster_created == False
+
+- name: fetch /tmp/k8s_node_names.json to local
+  synchronize:
+    mode: pull
+    src: /tmp/k8s_node_names.json
+    dest: /tmp/k8s_node_names.json

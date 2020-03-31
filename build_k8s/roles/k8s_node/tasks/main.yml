@@ -157,3 +157,9 @@
       - kubelet 
       - kubeadm 
       - kubectl
+
+- name: set domain name of control-plane-endpoint to ip address of the first_master
+  hosts_file:
+    ip: "{{ first_master }}"
+    host: "{{ k8s.control_plane_dns }}"
+    state: replace

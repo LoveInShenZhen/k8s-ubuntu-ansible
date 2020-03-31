@@ -1,0 +1,22 @@
+---
+- name: push local k8s_join_cmd.json to target host
+  copy:
+    src: /tmp/k8s_join_cmd.json
+    dest: /tmp/k8s_join_cmd.json
+
+- name: load k8s_join_cmd to facts
+  load_json:
+    path: /tmp/k8s_join_cmd.json
+
+- set_fact: full_join_cmd="{{ k8s_worker_join_cmd }} --node-name {{ host_name }}"
+
+- debug:
+    msg: "{{ full_join_cmd }}"
+
+# k8s_master_join_cmd like this:
+# kubeadm join k8s.cluster.local:6443 --token mdjtnj.ewrwatcff3tluml2 --discovery-token-ca-cert-hash sha256:00545ed6985a015f84cd9b878e6dc21f24683501b0379cefd2909647cfe7cfe4 --control-plane --certificate-key af8f391c0c4d849710539766514a9627039951e2d2793df92e7a68985e307051
+
+# https://kubernetes.io/zh/docs/reference/setup-tools/kubeadm/kubeadm-join/
+- name: new worker join to cluster
+  command:
+    cmd: "{{ full_join_cmd }}"

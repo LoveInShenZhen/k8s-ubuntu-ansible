@@ -6,15 +6,28 @@
     name: common
 
 # 参考: https://blog.csdn.net/weixin_43640082/article/details/83859885
-- name: add 电信 dns
+- name: add dns
   blockinfile:
     path: /etc/systemd/resolved.conf
     backup: yes
     insertafter: "\\[Resolve\\]"
     block: |
-      DNS=202.96.134.133
+      DNS=8.8.8.8
     state: present
   notify: restart systemd-resolved service
+
+- name: enable ip_vs kernel module auto loading when reboot
+  blockinfile:
+    path: /etc/modules
+    backup: yes
+    block: |
+      ip_vs
+    state: present
+
+- name: Load ip_vs kernel module
+  modprobe:
+    name: ip_vs
+    state: present
 
 - name: PermitRootLogin
   blockinfile:

@@ -21,6 +21,7 @@
   command:
     # cmd: "{{ k8s_master_join_cmd }} --apiserver-advertise-address {{ ansible_host }} --apiserver-bind-port {{ k8s.apiserver_bind_port }} --node-name {{ host_name }}"
     cmd: "{{ full_join_cmd }}"
+    warn: false
 
 - name: setup kubectl env
   shell:

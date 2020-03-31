@@ -7,6 +7,7 @@ worker
 first_master
 other_master
 
+# host_name 只能包含 英文字母,数字,中杠线 这3种字符, 我们使用 host_name 作为k8s 的node_name, 要保证唯一性 (注: 不允许有下划线)
 # 创建集群时的第一个 Master
 [first_master]
 192.168.3.151 host_name=master-1
@@ -18,10 +19,6 @@ other_master
 
 [worker]
 192.168.3.154 host_name=work-1
-
-[test_host]
-192.168.3.154 host_name=work-1
-192.168.3.151 host_name=master-1
 
 [all:vars]
 ansible_ssh_user=root

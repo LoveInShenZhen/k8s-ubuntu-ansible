@@ -25,6 +25,10 @@ other_master
 192.168.3.154
 192.168.3.155
 
+[high_availability]
+192.168.3.154 vip_interface=eth1
+192.168.3.155 vip_interface=eth1
+
 [all:vars]
 ansible_ssh_user=root
 ansible_ssh_private_key_file=/Users/kk/.ssh/id_rsa

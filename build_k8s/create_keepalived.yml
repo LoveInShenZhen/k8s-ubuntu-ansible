@@ -1,0 +1,32 @@
+---
+- name: setup keepalived on target host
+  hosts: high_availability
+  vars:
+    # 虚IP
+    virtual_ipaddress: 192.168.3.180/24
+    keepalived_router_id: 81
+    keepalived_password: FE3C5A94ACDC
+  tasks:
+    # 进行主机的基础设置
+    - import_role:
+        name: basic_setup
+
+    - name: install keepalived
+      apt:
+        update_cache: no
+        pkg:
+          - keepalived
+        state: present
+
+    - name: setup keepalived configuration
+      template:
+        src: keepalived.conf.j2
+        dest: /etc/keepalived/keepalived.conf
+        mode: u=rw,g=r,o=r
+      notify: restart keepalived service
+  
+  handlers:
+    - name: restart keepalived service
+      service:
+        name: keepalived
+        state: restarted    

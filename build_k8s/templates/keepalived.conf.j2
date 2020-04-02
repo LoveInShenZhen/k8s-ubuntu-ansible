@@ -1,0 +1,29 @@
+global_defs {
+  default_interface {{ vip_interface }}
+}
+
+vrrp_instance VI_1 {
+  interface {{ vip_interface }}
+
+  state BACKUP
+  virtual_router_id {{ keepalived_router_id }}
+  priority 150
+  advert 1
+  nopreempt
+
+  unicast_peer {
+{% for host in ansible_play_hosts_all %}
+    {{ host }}
+{% endfor %}
+  }
+
+  virtual_ipaddress {
+    {{ virtual_ipaddress }}
+  }
+
+  authentication {
+    auth_type PASS
+    auth_pass {{ keepalived_password }}
+  }
+
+}

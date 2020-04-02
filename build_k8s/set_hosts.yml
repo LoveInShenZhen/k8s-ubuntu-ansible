@@ -1,0 +1,20 @@
+---
+# 在所有目标主机上设置知道的域名解析
+- name: setup dns
+  hosts: nodes
+  vars:
+    domain_name: "undefined"
+    domain_ip: "undefined"
+  tasks:
+    - name: "check parameter: domain_name"
+      fail:
+        msg: "domain_name is undefined"
+      when: domain_name == "undefined"
+
+    - name: "check parameter: domain_ip"
+      fail:
+        msg: "domain_ip is undefined"
+      when: domain_ip == "undefined"
+    
+    - debug:
+        msg: "check.................... [OK]"

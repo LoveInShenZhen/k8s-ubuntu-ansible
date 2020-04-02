@@ -26,7 +26,7 @@ listen stats
     stats enable
     stats hide-version
     stats realm Haproxy\ Statistics
-    stats uri /haproxy_stats
+    stats uri {{ ha_stats_url }}
     stats auth {{ ha_stats_user }}:{{ ha_stats_pwd }}
 {% endif %}
 

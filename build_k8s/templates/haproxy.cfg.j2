@@ -1,0 +1,46 @@
+global
+  log /dev/log	local0
+  log /dev/log	local1 notice
+  chroot /var/lib/haproxy
+  stats socket /run/haproxy/admin.sock mode 660 level admin expose-fd listeners
+  stats timeout 30s
+  user haproxy
+  group haproxy
+  daemon
+
+
+defaults
+  log global
+  option dontlognull
+  # Set the maximum time to wait for a connection attempt to a server to succeed.
+  timeout connect 3000ms
+  # Set the maximum inactivity time on the client side.
+  timeout client  60s
+  # Set the maximum inactivity time on the server side.
+  timeout server  120s
+
+{% if ha_stats_enable %}
+listen stats 
+    bind *:{{ ha_stats_port }}
+    mode http
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /haproxy_stats
+    stats auth {{ ha_stats_user }}:{{ ha_stats_pwd }}
+{% endif %}
+
+frontend service_endpoint
+    mode tcp
+    bind *:{{ service_bind_port }}
+    default_backend service_backend
+
+backend service_backend
+    mode tcp
+    balance roundrobin
+    stick-table type ip size 200k expire 30m
+    stick on src
+{% for server in backend_servers %}
+    server "{{ server }}" {{ server }} check inter 1s rise 3 fall 1
+{% endfor %}
+  

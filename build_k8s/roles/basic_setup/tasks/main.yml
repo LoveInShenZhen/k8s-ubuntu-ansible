@@ -1,0 +1,103 @@
+---
+# tasks file for basic_setup
+# 加载共有变量
+- import_role:
+    name: common
+
+- name: setup hostname
+  hostname:
+    name: "{{ host_name }}" 
+
+# 参考: https://blog.csdn.net/weixin_43640082/article/details/83859885
+- name: add dns
+  blockinfile:
+    path: /etc/systemd/resolved.conf
+    backup: yes
+    insertafter: "\\[Resolve\\]"
+    block: |
+      DNS=8.8.8.8
+    state: present
+  notify: restart systemd-resolved service
+
+- name: PermitRootLogin
+  blockinfile:
+    path: /etc/ssh/sshd_config
+    block: |
+      PermitRootLogin yes
+    state: present
+  notify: restart ssh service
+
+- name: gathering swap state
+  swap_state:
+
+- name: disable swapoff now
+  shell: swapoff -a
+  when: host_swap_on == True
+      
+- name: disable swapoff permanently
+  replace:
+    path: /etc/fstab
+    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+    replace: '#\1\2\3swap\4'
+    backup: yes
+  
+- name: "disable ufw [Uncomplicated Firewall]"
+  service:
+    name: ufw
+    enabled: no
+    state: stopped
+
+- name: enable ip_vs kernel module auto loading when reboot
+  blockinfile:
+    path: /etc/modules
+    backup: yes
+    block: |
+      ip_vs
+    state: present
+
+- name: Load ip_vs kernel module
+  modprobe:
+    name: ip_vs
+    state: present
+
+- name: change to aliyun source
+  copy: 
+    src: aliyun.ubuntu.1804.source.list 
+    dest: /etc/apt/sources.list 
+    mode: u=rw,g=r,o=r
+
+- name: install dependence pkgs
+  apt:
+    update_cache: yes
+    pkg:
+      - apt-transport-https
+      - ca-certificates
+      - software-properties-common
+      - curl
+      - gnupg-agent
+      - python3-pip
+      - iptables
+      - ntpdate
+      - rsync
+    state: present
+
+- name: setup timezone
+  timezone:
+    hwclock: UTC
+    name: Asia/Shanghai
+  
+- name: setup ntpdate cron task
+  cron:
+    name: ntpdate sync time daily
+    job: "ntpdate {{ ntpdate_server }}"
+    day: "*"
+    hour: "3"
+    minute: "0"
+  notify: ntpdate sync time now
+
+  # ref: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E7%A1%AE%E4%BF%9D-iptables-%E5%B7%A5%E5%85%B7%E4%B8%8D%E4%BD%BF%E7%94%A8-nftables-%E5%90%8E%E7%AB%AF
+- name: remove nftables
+  apt:
+    pkg:
+      - nftables
+    state: absent

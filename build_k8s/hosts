@@ -19,6 +19,11 @@ other_master
 
 [worker]
 192.168.3.154 host_name=work-1
+192.168.3.155 host_name=work-2
+
+[load_blance]
+192.168.3.154
+192.168.3.155
 
 [all:vars]
 ansible_ssh_user=root

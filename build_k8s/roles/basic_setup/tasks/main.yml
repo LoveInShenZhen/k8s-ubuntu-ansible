@@ -26,20 +26,6 @@
       PermitRootLogin yes
     state: present
   notify: restart ssh service
-
-- name: gathering swap state
-  swap_state:
-
-- name: disable swapoff now
-  shell: swapoff -a
-  when: host_swap_on == True
-      
-- name: disable swapoff permanently
-  replace:
-    path: /etc/fstab
-    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
-    replace: '#\1\2\3swap\4'
-    backup: yes
   
 - name: "disable ufw [Uncomplicated Firewall]"
   service:

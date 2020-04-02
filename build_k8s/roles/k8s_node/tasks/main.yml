@@ -9,6 +9,21 @@
 - import_role:
     name: basic_setup
 
+# k8s 需要主机关闭交换分区
+- name: gathering swap state
+  swap_state:
+
+- name: disable swapoff now
+  shell: swapoff -a
+  when: host_swap_on == True
+      
+- name: disable swapoff permanently
+  replace:
+    path: /etc/fstab
+    regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+    replace: '#\1\2\3swap\4'
+    backup: yes
+
 - name: add docker-ce GPG key
   apt_key:
     url: "{{ apt.docker.apt_key_url }}"

@@ -16,5 +16,8 @@
         msg: "domain_ip is undefined"
       when: domain_ip == "undefined"
     
-    - debug:
-        msg: "check.................... [OK]"
+    - name: setup domain and ip addres in hosts file
+      hosts_file:
+        host: "{{ domain_name }}"
+        ip: "{{ domain_ip }}"
+        state: "{{ replace }}"

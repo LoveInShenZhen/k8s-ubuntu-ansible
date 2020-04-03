@@ -156,7 +156,7 @@
 
 *  文件路径: roles/common/defaults/main.yml
 
-* 文件sample 如下, 文件中的配置以下文的 *[案例描述](# 案例描述)* 为例:
+* 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
 
   ```yaml
   ---
@@ -233,7 +233,7 @@ ansible-playbook prepare_all_host.yml
 ### 将 3 个 master 组成负载均衡
 
 > 注: 单master节点模式不需要执行此步骤
-1. 检查 create_haproxy.yml 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](# 案例描述)* 为例:
+1. 检查 create_haproxy.yml 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
 
    ```yaml
    ---

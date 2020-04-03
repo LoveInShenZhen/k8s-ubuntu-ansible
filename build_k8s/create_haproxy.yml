@@ -2,12 +2,18 @@
 - name: Create a load blance using HAproxy
   hosts: lb_and_ha
   vars:
-    service_bind_port: 6443
-    backend_servers:
-      # - "<ip>:<port>"
-      - "192.168.3.151:6443"
-      - "192.168.3.152:6443"
-      - "192.168.3.153:6443"
+    # 负载均衡对外提供服务的端口
+    service_bind_port: "{{ k8s.control_plane_port }}"
+    # 后端服务器使用的端口, 是给下面转换的过滤器使用的, haproxy.cfg.j2 模板没有使用该变量
+    backend_server_port: "{{ k8s.apiserver_bind_port }}"
+    # 转换成形如: ['192.168.3.151:6443', '192.168.3.152:6443', '192.168.3.153:6443'] 的列表
+    backend_servers: "{{ ansible_play_hosts_all | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
+    # 或者采用如下的方式, 手动设置, 这样 backend_servers 可以由集群外的主机来担任
+    # backend_servers:
+    #   # - "<ip>:<port>"
+    #   - "192.168.3.151:6443"
+    #   - "192.168.3.152:6443"
+    #   - "192.168.3.153:6443"
     ha_stats_enable: True
     ha_stats_port: 1936
     ha_stats_url: /haproxy_stats
@@ -18,7 +24,7 @@
     - name: check parameters
       fail:
         msg: "Please setup backend_servers parameter"
-      when: backend_servers[0] == '<ip>:<port>'
+      when: backend_servers == None or (backend_servers|count) == 0 or backend_servers[0] == '' or  backend_servers[0] == '<ip>:<port>'
 
       # 进行主机的基础设置
     - import_role:
@@ -91,12 +97,12 @@
         mode: u=rw,g=r,o=r
       notify: restart HAproxy service
 
-  # handlers:
+  handlers:
   #   - name: restart docker service
   #     service:
   #       name: docker
   #       state: restarted
-  #   - name: restart HAproxy service
-  #     service:
-  #       name: haproxy
-  #       state: restarted
+    - name: restart HAproxy service
+      service:
+        name: haproxy
+        state: restarted

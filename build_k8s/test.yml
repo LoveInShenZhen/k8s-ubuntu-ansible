@@ -1,40 +1,32 @@
 ---
-- hosts: first_master
+- name: test
+  hosts: lb_and_ha
+  vars:
+    service_bind_port: "{{ k8s.control_plane_port }}"
+    backend_server_port: "{{ k8s.apiserver_bind_port }}"
+    backend_servers: #"{{ ansible_play_hosts_all | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
+      # - "<ip>:<port>"
+      # - "192.168.3.151:6443"
+      # - "192.168.3.152:6443"
+      # - "192.168.3.153:6443"
+    
   tasks:
-    - include_role:
-        name: add_other_master
-# - name: Get cluster nodes names
-#   hosts: first_master
-#   tasks:
-#     - include_role:
-#         name: get_cluster_node_names
-    
-    # - name: print join cmd
-    #   k8s_print_join_cmd:
-    #     save_to: /tmp/k8s_join_cmd.json
+    # - name: check parameters
+    #   fail:
+    #     msg: "Please setup backend_servers parameter"
+    #   when: backend_servers[0] == '<ip>:<port>'
 
-    # - name: fetch /tmp/k8s_join_cmd.json to local
-    #   synchronize:
-    #     mode: pull
-    #     src: /tmp/k8s_join_cmd.json
-    #     dest: /tmp/k8s_join_cmd.json
-    
-    # - debug:
-    #     msg: "worker: {{ k8s_worker_join_cmd }}"
-    # - debug:
-    #     msg: "master: {{ k8s_master_join_cmd }}"
+      # 进行主机的基础设置
+    - import_role:
+        name: common
 
-# - hosts: nodes
-#   tasks:
-#     - name: push local k8s_node_names to target host
-#       copy:
-#         src: /tmp/k8s_node_names.json
-#         dest: /tmp/k8s_node_names.json
-#     - name: load facts from file
-#       load_json:
-#         path: /tmp/k8s_node_names.json
-#     - debug:
-#         msg: "{{ host_name }} knows : {{ k8s_node_names }}"
-#     - debug:
-#         msg: "i am {{ host_name }}, and i am not in cluster."
-#       when: host_name not in k8s_node_names
+    - name: check parameters
+      fail:
+        msg: "Please setup backend_servers parameter"
+      when: backend_servers == None or (backend_servers|count) == 0 or backend_servers[0] == '' or  backend_servers[0] == '<ip>:<port>'
+
+    - debug:
+        msg: "service_bind_port = {{ service_bind_port }}"
+
+    - debug:
+        msg: "backend_servers = {{ backend_servers }}"

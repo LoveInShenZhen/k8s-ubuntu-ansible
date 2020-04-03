@@ -5,15 +5,14 @@
     service_bind_port: 6443
     backend_servers:
       # - "<ip>:<port>"
-      - "192.168.3.154:8010"
-      - "192.168.3.154:8020"
-      - "192.168.3.155:8010"
-      - "192.168.3.155:8020"
+      - "192.168.3.151:6443"
+      - "192.168.3.152:6443"
+      - "192.168.3.153:6443"
     ha_stats_enable: True
     ha_stats_port: 1936
     ha_stats_url: /haproxy_stats
     ha_stats_user: admin
-    ha_stats_pwd: 9527
+    ha_stats_pwd: showmethemoney
     
   tasks:
     - name: check parameters

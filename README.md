@@ -84,7 +84,7 @@
 
 * hosts 文件描述了我们的 ansible 脚本要操作的目标主机
 
-* 文件sample 如下, 文件中的配置以下文的案例描述为例:
+* 文件sample 如下, 文件中的配置以下文的 *[案例描述](# 案例描述)* 为例:
 
   ```
   # 主机清单文件参考: http://ansible.com.cn/docs/intro_inventory.html
@@ -156,7 +156,7 @@
 
 *  文件路径: roles/common/defaults/main.yml
 
-* 文件sample 如下, 文件中的配置以下文的案例描述为例:
+* 文件sample 如下, 文件中的配置以下文的 *[案例描述](# 案例描述)* 为例:
 
   ```yaml
   ---
@@ -207,6 +207,7 @@
   | k8s.pod_network_cidr      | 请参考 kubeadm init 命令的 **--pod-network-cidr** 参数       |
   | k8s.service_cidr          | 请参考 kubeadm init 命令的 **--service-cidr** 参数           |
   | k8s.service_dns_domain    | 请参考 kubeadm init 命令的 **--service-dns-domain** 参数     |
+  | k8s.image_repository      | 请参考 kubeadm init 命令的 **--image-repository** 参数<br />通过设置此参数, 安装过程就不会从默认的 k8s.gcr.io 仓库下载镜像了, 解决了 k8s.gcr.io 仓库被墙的问题.<br />我们的参数配置,使用了 [GCR Proxy Cache](http://mirror.azure.cn/help/gcr-proxy-cache.html) 镜像仓库<br />[**--image-repository** 参数使用请参考这篇文章](https://www.jianshu.com/p/d42ef0eff63f) |
   |                           |                                                              |
   | apt.docker.apt_key_url    | Docker’s official GPG key.                                   |
   | apt.docker.apt_repository | Docker’s official repository 请参考[官方文档:ununtu下安装docker-ce](https://docs.docker.com/install/linux/docker-ce/ubuntu/) |
@@ -229,10 +230,10 @@
 ansible-playbook prepare_all_host.yml
 ```
 
-### 3 master 组成负载均衡+高可用模式下执行
+### 将 3 个 master 组成负载均衡
 
-> 单master节点模式不需要执行此步骤
-1. 检查 create_haproxy.yml 配置, 文件sample 如下, 文件中的配置以下文的案例描述为例:
+> 注: 单master节点模式不需要执行此步骤
+1. 检查 create_haproxy.yml 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](# 案例描述)* 为例:
 
    ```yaml
    ---
@@ -306,7 +307,9 @@ ansible-playbook create_haproxy.yml
 3. 脚本运行完毕后, 我们可以在其中一台master机器上, 查看 haproxy 的监控页面, 例如: master-1 ip: 192.168.3.151
    http://192.168.3.151:1936/haproxy_stats
 
+   ![haproxy stats](https://kklongming.github.io/res/images/haproxy_stats.jpg)
 
+4. 
 
 # 案例描述
 

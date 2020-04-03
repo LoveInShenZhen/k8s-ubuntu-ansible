@@ -18,8 +18,10 @@
 2. 网络规划
 3. 获取安装脚本
 4. 根据目标主机和网络规划修改配置文件
+5. 分阶段执行脚本
 
 ## 准备阶段
+
 ### 目标主机
 
 * 操作系统: **ubuntu 18.04**
@@ -334,7 +336,7 @@ ansible-playbook create_haproxy.yml
    ansible-playbook create_first_master_for_cluster.yml
    ```
 
-4. 脚本执行完成后, 第一个Master应该顺利启动了, ssh到第一个Master上执行以下命令, 查看集群节点信息:
+4. 脚本执行完成后, 第一个Master应该顺利启动了, ssh到 **master-1** 上执行以下命令, 查看集群节点信息:
 
    ```bash
    kubectl get nodes
@@ -345,13 +347,13 @@ ansible-playbook create_haproxy.yml
    master-1   NotReady   master   29s   v1.18.0
    ```
    
-   查看集群信息
+   在master-1上执行以下命令查看集群信息
    
    ```bash
    kubectl cluster-info
    ```
    
-   输出
+   输出如下信息, 可以看到集群已经是 **running** 状态
    
    ```
    Kubernetes master is running at https://k8s.cluster.local:7443
@@ -375,6 +377,8 @@ ansible-playbook --forks 1 add_other_node_to_cluster.yml
 
 
 ### 将 3 个 master配置成高可用
+
+现在集群已经创建完毕, 但是 **控制平面的域名** 还是指向 master-1. 接着我们需要将3个master 配置成高可用模式, 让 **3个master的 虚IP** 生效
 
 1. 检查 **create_keepalived.yml** 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
 
@@ -422,7 +426,30 @@ ansible-playbook --forks 1 add_other_node_to_cluster.yml
    ```bash
    ansible-playbook create_keepalived.yml
    ```
+   
 4. 执行完毕后, 检查是否能够 **ping 通虚IP**. 能ping通, 说明 3 台master中有一台已经竞选称为虚IP的拥有者
+### 将控制平面域名解析至虚IP
+
+虚IP生效后, 我们需要更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到虚IP上
+
+执行脚本命令:
+
+> 在此例中, 虚IP地址为: 192.168.3.150
+
+```bash
+ansible-playbook set_hosts.yml -e "domain_name=k8s.cluster.local domain_ip=192.168.3.150"
+```
+
+在节点主机对控制平面域名进行 ping 测试, 验证域名已正确解析到虚IP上.
+
+在master节点主机上, 执行命令, 检查是否能正常查看节点信息 (kubectl 命令会通过控制平面域名和端口来访问控制平面的 api_server):
+
+```bash
+kubectl get nodes
+```
+
+
+
 # 案例描述
 
 * 采用多 master 集群模式

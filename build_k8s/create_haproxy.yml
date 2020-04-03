@@ -14,10 +14,16 @@
     #   - "192.168.3.151:6443"
     #   - "192.168.3.152:6443"
     #   - "192.168.3.153:6443"
+
+    # 是否开启 haproxy stats 页面
     ha_stats_enable: True
+    # haproxy stats 页面的服务端口
     ha_stats_port: 1936
+    # haproxy stats 页面的 url
     ha_stats_url: /haproxy_stats
+    # haproxy stats 页面的访问的用户名
     ha_stats_user: admin
+    # haproxy stats 页面的访问的密码
     ha_stats_pwd: showmethemoney
     
   tasks:
@@ -36,58 +42,6 @@
         pkg:
           - haproxy
         state: present
-
-    # - name: add docker-ce GPG key
-    #   apt_key:
-    #     url: "{{ apt.docker.apt_key_url }}"
-    #     state: present
-
-    # - name: add docker-ce APT repository
-    #   apt_repository:
-    #     repo: "deb [arch=amd64] {{ apt.docker.apt_repository }} {{ ansible_lsb.codename }} stable"
-
-    # - name: check if docker installed
-    #   stat:
-    #     path: /usr/bin/docker
-    #   register: check_docker
-
-    # - name: update apt cache if docker does not installed
-    #   apt:
-    #     update_cache: yes
-    #   when: check_docker.stat.exists == False
-
-    # - name: install docker-ce pkg
-    #   apt:
-    #     pkg:
-    #       - docker-ce
-    #       - docker-ce-cli
-    #       - containerd.io
-
-    # - name: setup /etc/docker/daemon.json
-    #   json_patch:
-    #     src: "/etc/docker/daemon.json"
-    #     create: yes
-    #     create_type: object
-    #     pretty: yes
-    #     operations:
-    #       - op: add
-    #         path: "/registry-mirrors"
-    #         value: ["https://dockerhub.azk8s.cn"]
-    #       - op: add
-    #         path: "/exec-opts"
-    #         value: ["native.cgroupdriver=systemd"]
-    #   notify: restart docker service
-
-    # - name: Check if docker-compose exists
-    #   stat:
-    #     path: /usr/local/bin/docker-compose
-    #   register: docker_compose
-
-    # - name: Install docker-compose
-    #   shell:
-    #     cmd: 'curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose'
-    #     warn: false
-    #   when: docker_compose.stat.exists == False
     
     - name: setup HAproxy configuration
       template:
@@ -98,10 +52,6 @@
       notify: restart HAproxy service
 
   handlers:
-  #   - name: restart docker service
-  #     service:
-  #       name: docker
-  #       state: restarted
     - name: restart HAproxy service
       service:
         name: haproxy

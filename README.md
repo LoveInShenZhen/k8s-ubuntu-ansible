@@ -84,7 +84,7 @@
 
 * hosts 文件描述了我们的 ansible 脚本要操作的目标主机
 
-* 文件sample 如下, 文件中的配置以下文的 *[案例描述](# 案例描述)* 为例:
+* 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
 
   ```
   # 主机清单文件参考: http://ansible.com.cn/docs/intro_inventory.html

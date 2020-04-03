@@ -176,7 +176,9 @@
       pod_network_cidr: "192.168.0.0/16"
       service_cidr: "10.96.0.0/12"
       service_dns_domain: "cluster.local"
-      image_repository: "gcr.azk8s.cn/google_containers"
+      # 可选值: registry.cn-hangzhou.aliyuncs.com/google_containers  [官方文档](https://github.com/AliyunContainerService/sync-repo)
+      # gcr.azk8s.cn/google_containers  [官方文档](http://mirror.azure.cn/help/gcr-proxy-cache.html)
+      image_repository: "registry.cn-hangzhou.aliyuncs.com/google_containers"
   
   apt:
       docker:

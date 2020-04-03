@@ -20,4 +20,4 @@
       hosts_file:
         host: "{{ domain_name }}"
         ip: "{{ domain_ip }}"
-        state: "{{ replace }}"
+        state: "replace"

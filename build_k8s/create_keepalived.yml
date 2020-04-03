@@ -1,9 +1,9 @@
 ---
 - name: setup keepalived on target host
-  hosts: high_availability
+  hosts: lb_and_ha
   vars:
     # 虚IP
-    virtual_ipaddress: 192.168.3.180/24
+    virtual_ipaddress: 192.168.3.150/24
     keepalived_router_id: 81
     keepalived_password: FE3C5A94ACDC
   tasks:

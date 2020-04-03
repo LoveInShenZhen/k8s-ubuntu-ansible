@@ -1,14 +1,12 @@
 ---
 # defaults file for common
-# 集群主机使用的网卡设备名称
-iface: eth0
 
 k8s:
     # 控制平面的 主机域名和端口号
     # ref: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/high-availability/#%E4%BD%BF%E7%94%A8%E5%A0%86%E6%8E%A7%E5%88%B6%E5%B9%B3%E9%9D%A2%E5%92%8C-etcd-%E8%8A%82%E7%82%B9
     # kubeadm init --control-plane-endpoint "control_plane_dns:control_plane_port" ...(略)
     control_plane_dns: k8s.cluster.local
-    control_plane_port: 6443
+    control_plane_port: 7443
     # apiserver_advertise_address: 0.0.0.0
     apiserver_bind_port: 6443
     # ref: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network

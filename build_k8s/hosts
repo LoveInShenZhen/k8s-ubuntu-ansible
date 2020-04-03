@@ -21,13 +21,10 @@ other_master
 192.168.3.154 host_name=work-1
 192.168.3.155 host_name=work-2
 
-[load_blance]
-192.168.3.154
-192.168.3.155
-
-[high_availability]
-192.168.3.154 vip_interface=eth1
-192.168.3.155 vip_interface=eth1
+[lb_and_ha]
+192.168.3.151 vip_interface=eth1
+192.168.3.152 vip_interface=eth1
+192.168.3.153 vip_interface=eth1
 
 [all:vars]
 ansible_ssh_user=root

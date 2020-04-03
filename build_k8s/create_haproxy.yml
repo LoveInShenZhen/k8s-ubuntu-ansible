@@ -1,6 +1,6 @@
 ---
 - name: Create a load blance using HAproxy
-  hosts: load_blance
+  hosts: lb_and_ha
   vars:
     service_bind_port: 6443
     backend_servers:

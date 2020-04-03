@@ -233,7 +233,7 @@ ansible-playbook prepare_all_host.yml
 ### 将 3 个 master 组成负载均衡
 
 > 注: 单master节点模式不需要执行此步骤
-1. 检查 create_haproxy.yml 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
+1. 检查 **create_haproxy.yml** 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
 
    ```yaml
    ---
@@ -309,8 +309,84 @@ ansible-playbook create_haproxy.yml
 
    ![haproxy stats](https://kklongming.github.io/res/images/haproxy_stats.jpg)
 
-4. 
+### 初始化,创建第一个Master节点
 
+1. 更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到第一个Master节点的IP地址上
+
+   > 为什么?
+   >
+   > * 在创建集群, 向集群添加节点的过程, 我们需要保证通过 **控制平面域名**+**控制平面端口** 的方式, 可以访问到master的api_server服务. 所以在集群的创建的过程中, 先暂时将控制平面域名解析到第一个Master 节点
+   > * 等待其余的2个master都加入到集群后, 再将3个master配置成高可用, 控制平面的虚IP生效后, 再更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到虚IP.
+
+2. 执行以下命令进行更新控制平面域名解析操作, 注意下面示例中的传参方式
+   * 通过 **-e** "<key1>=<value1>  <key2>=<value2> ..." 方式传参
+   * 需要指定 **domain_name** 和 **domain_ip** 2个参数
+   * **domain_name** 为控制平面域名, 请根据制定的网络规划进行赋值
+   * **domain_ip** 为控制域名解析的目标IP, 这里我们指定为**第一个Master**的IP
+
+   ```bash
+   ansible-playbook set_hosts.yml -e "domain_name=k8s.cluster.local domain_ip=192.168.3.151"
+   ```
+
+3. 执行脚本, 开始创建第一个Master节点
+
+   ```baseh
+   
+   ```
+
+   
+
+
+
+### 将 3 个 master配置成高可用
+
+1. 检查 **create_keepalived.yml** 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
+
+   ```yaml
+   ---
+   - name: setup keepalived on target host
+     hosts: lb_and_ha
+     vars:
+       # 虚IP
+       virtual_ipaddress: 192.168.3.150/24
+       keepalived_router_id: 81
+       keepalived_password: FE3C5A94ACDC
+     tasks:
+       # 进行主机的基础设置
+       - import_role:
+           name: basic_setup
+   
+       - name: install keepalived
+         apt:
+           update_cache: no
+           pkg:
+             - keepalived
+           state: present
+   
+       - name: setup keepalived configuration
+         template:
+           src: keepalived.conf.j2
+           dest: /etc/keepalived/keepalived.conf
+           mode: u=rw,g=r,o=r
+         notify: restart keepalived service
+     
+     handlers:
+       - name: restart keepalived service
+         service:
+           name: keepalived
+           state: restarted    
+   ```
+   
+2. 确定 **虚IP** 配置项 **virtual_ipaddress** 与规划的一致
+
+   > 注意: 这里的虚ip配置, ip地址需要加上子网掩码位数的标识, 例如: **/24**
+
+3. 执行脚本, 在 3 个master上配置高可用(keepalived方式)
+
+   ```bash
+   ansible-playbook create_keepalived.yml
+   ```
+4. 执行完毕后, 检查是否能够 **ping 通虚IP**. 能ping通, 说明 3 台master中有一台已经竞选称为虚IP的拥有者
 # 案例描述
 
 * 采用多 master 集群模式

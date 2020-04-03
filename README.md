@@ -232,14 +232,79 @@ ansible-playbook prepare_all_host.yml
 ### 3 master 组成负载均衡+高可用模式下执行
 
 > 单master节点模式不需要执行此步骤
-1. 检查 create_haproxy.yml 配置
+1. 检查 create_haproxy.yml 配置, 文件sample 如下, 文件中的配置以下文的案例描述为例:
+
+   ```yaml
+   ---
+   - name: Create a load blance using HAproxy
+     hosts: lb_and_ha
+     vars:
+       # 负载均衡对外提供服务的端口
+       service_bind_port: "{{ k8s.control_plane_port }}"
+       # 后端服务器使用的端口, 是给下面转换的过滤器使用的, haproxy.cfg.j2 模板没有使用该变量
+       backend_server_port: "{{ k8s.apiserver_bind_port }}"
+       # 转换成形如: ['192.168.3.151:6443', '192.168.3.152:6443', '192.168.3.153:6443'] 的列表
+       backend_servers: "{{ ansible_play_hosts_all | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
+       # 或者采用如下的方式, 手动设置, 这样 backend_servers 可以由集群外的主机来担任
+       # backend_servers:
+       #   # - "<ip>:<port>"
+       #   - "192.168.3.151:6443"
+       #   - "192.168.3.152:6443"
+       #   - "192.168.3.153:6443"
+   
+       # 是否开启 haproxy stats 页面
+       ha_stats_enable: True
+       # haproxy stats 页面的服务端口
+       ha_stats_port: 1936
+       # haproxy stats 页面的 url
+       ha_stats_url: /haproxy_stats
+       # haproxy stats 页面的访问的用户名
+       ha_stats_user: admin
+       # haproxy stats 页面的访问的密码
+       ha_stats_pwd: showmethemoney
+       
+     tasks:
+       - name: check parameters
+         fail:
+           msg: "Please setup backend_servers parameter"
+         when: backend_servers == None or (backend_servers|count) == 0 or backend_servers[0] == '' or  backend_servers[0] == '<ip>:<port>'
+   
+         # 进行主机的基础设置
+       - import_role:
+           name: basic_setup
+   
+       - name: install haproxy
+         apt:
+           update_cache: no
+           pkg:
+             - haproxy
+           state: present
+       
+       - name: setup HAproxy configuration
+         template:
+           backup: True
+           src: haproxy.cfg.j2
+           dest: /etc/haproxy/haproxy.cfg
+           mode: u=rw,g=r,o=r
+         notify: restart HAproxy service
+   
+     handlers:
+       - name: restart HAproxy service
+         service:
+           name: haproxy
+           state: restarted
+   ```
+
+   
+
 2. 在3个master上创建负载均衡服务
 
 ```bash
 ansible-playbook create_haproxy.yml
 ```
 
-
+3. 脚本运行完毕后, 我们可以在其中一台master机器上, 查看 haproxy 的监控页面, 例如: master-1 ip: 192.168.3.151
+   http://192.168.3.151:1936/haproxy_stats
 
 
 

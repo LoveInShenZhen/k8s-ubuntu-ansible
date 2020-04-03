@@ -146,9 +146,9 @@
 
   > 为什么?
   >
-  > * vip_interface 为用来指定虚IP所绑定的网卡设备名称
+  > * vip_interface 被用来指定虚IP所绑定的网卡设备名称
   > * 主机上可能有不止一块网卡, 所以需要进行明确指定
-  > * 主机上的多块网卡可能设置成bond模式, 通过此参数来指定虚IP绑定到指定的 bond网卡 上
+  > * 主机上的多块网卡可能设置成bond模式, 通过此参数来指定虚IP绑定到指定的 bond网卡上
   
 * 请设置 **ansible_ssh_private_key_file** 为root用户ssh登录目标主机的证书
 
@@ -226,8 +226,20 @@
 ### 为所有的目标主机执行初始化设置
 
 ```bash
-
+ansible-playbook prepare_all_host.yml
 ```
+
+### 3 master 组成负载均衡+高可用模式下执行
+
+> 单master节点模式不需要执行此步骤
+1. 检查 create_haproxy.yml 配置
+2. 在3个master上创建负载均衡服务
+
+```bash
+ansible-playbook create_haproxy.yml
+```
+
+
 
 
 

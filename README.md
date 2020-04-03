@@ -376,6 +376,18 @@ ansible-playbook create_haproxy.yml
 ansible-playbook --forks 1 add_other_node_to_cluster.yml
 ```
 
+检查集群节点信息, 在一台 master 节点上执行命令:
+
+```bash
+root@master-2:~# kubectl get nodes
+NAME       STATUS   ROLES    AGE   VERSION
+master-1   Ready    master   61m   v1.18.0
+master-2   Ready    master   26m   v1.18.0
+master-3   Ready    master   48m   v1.18.0
+work-1     Ready    <none>   46m   v1.18.0
+work-2     Ready    <none>   46m   v1.18.0
+```
+
 
 
 ### 将 3 个 master配置成高可用

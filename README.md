@@ -336,18 +336,18 @@ ansible-playbook create_haproxy.yml
 
 4. 脚本执行完成后, 第一个Master应该顺利启动了, ssh到第一个Master上执行以下命令, 查看集群节点信息:
 
-   ```
+   ```bash
    kubectl get nodes
    ```
    应该出现如下信息, 表明集群已经顺利创建了,尽管现在只有一个master-1节点
    ```
    NAME       STATUS     ROLES    AGE   VERSION
    master-1   NotReady   master   29s   v1.18.0
-```
+   ```
    
    查看集群信息
    
-   ```
+   ```bash
    kubectl cluster-info
    ```
    

@@ -323,7 +323,7 @@ ansible-playbook create_haproxy.yml
    > * 等待其余的2个master都加入到集群后, 再将3个master配置成高可用, 控制平面的虚IP生效后, 再更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到虚IP.
 
 2. 执行以下命令进行更新控制平面域名解析操作, 注意下面示例中的传参方式
-   * 通过 **-e** "<key1>=<value1>  <key2>=<value2> ..." 方式传参
+   * 通过 **-e** "key1=value1  key2=value2 ..." 方式传参
    * 需要指定 **domain_name** 和 **domain_ip** 2个参数
    * **domain_name** 为控制平面域名, 请根据制定的网络规划进行赋值
    * **domain_ip** 为控制域名解析的目标IP, 这里我们指定为**第一个Master**的IP

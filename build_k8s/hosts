@@ -21,6 +21,7 @@ other_master
 192.168.3.154 host_name=work-1
 192.168.3.155 host_name=work-2
 
+# vip_interface 为虚IP所绑定的网卡设备名称
 [lb_and_ha]
 192.168.3.151 vip_interface=eth1
 192.168.3.152 vip_interface=eth1

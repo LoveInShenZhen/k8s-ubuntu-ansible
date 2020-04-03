@@ -207,7 +207,7 @@
   | k8s.pod_network_cidr      | 请参考 kubeadm init 命令的 **--pod-network-cidr** 参数       |
   | k8s.service_cidr          | 请参考 kubeadm init 命令的 **--service-cidr** 参数           |
   | k8s.service_dns_domain    | 请参考 kubeadm init 命令的 **--service-dns-domain** 参数     |
-  | k8s.image_repository      | 请参考 kubeadm init 命令的 **--image-repository** 参数<br />通过设置此参数, 安装过程就不会从默认的 k8s.gcr.io 仓库下载镜像了, 解决了 k8s.gcr.io 仓库被墙的问题.<br />我们的参数配置,使用了 [GCR Proxy Cache](http://mirror.azure.cn/help/gcr-proxy-cache.html) 镜像仓库<br />[**--image-repository** 参数使用请参考这篇文章](https://www.jianshu.com/p/d42ef0eff63f) |
+  | k8s.image_repository      | 请参考 kubeadm init 命令的 **--image-repository** 参数<br />通过设置此参数, 安装过程就不会从默认的 k8s.gcr.io 仓库下载镜像了, 解决了 k8s.gcr.io 仓库被墙的问题.<br />我们的参数配置,使用了 [Aliyun (Alibaba Cloud) Container Service](https://github.com/AliyunContainerService/sync-repo)  提供的镜像仓库<br />[**--image-repository** 参数使用请参考这篇文章](https://www.jianshu.com/p/d42ef0eff63f) |
   |                           |                                                              |
   | apt.docker.apt_key_url    | Docker’s official GPG key.                                   |
   | apt.docker.apt_repository | Docker’s official repository 请参考[官方文档:ununtu下安装docker-ce](https://docs.docker.com/install/linux/docker-ce/ubuntu/) |
@@ -331,10 +331,46 @@ ansible-playbook create_haproxy.yml
 3. 执行脚本, 开始创建第一个Master节点
 
    ```baseh
-   
+   ansible-playbook create_first_master_for_cluster.yml
    ```
 
+4. 脚本执行完成后, 第一个Master应该顺利启动了, ssh到第一个Master上执行以下命令, 查看集群节点信息:
+
+   ```
+   kubectl get nodes
+   ```
+   应该出现如下信息, 表明集群已经顺利创建了,尽管现在只有一个master-1节点
+   ```
+   NAME       STATUS     ROLES    AGE   VERSION
+   master-1   NotReady   master   29s   v1.18.0
+```
    
+   查看集群信息
+   
+   ```
+   kubectl cluster-info
+   ```
+   
+   输出
+   
+   ```
+   Kubernetes master is running at https://k8s.cluster.local:7443
+   KubeDNS is running at https://k8s.cluster.local:7443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+   
+   To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
+   ```
+   
+   
+
+### 添加其他的节点 master 到集群
+
+执行脚本, 添加 **其他的 master 节点**和 **worker节点**到集群
+
+> 注:  添加 **--forks 1** 以便一台一台的加. 因为测试中发现, 并行添加的时候, 有一定概率出现因ETCD发生重新选举而导致添加Master失败, 更多数量的同步更加因硬件资源有限, 没有测试过.
+
+```bash
+ansible-playbook --forks 1 add_other_node_to_cluster.yml
+```
 
 
 

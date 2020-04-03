@@ -38,8 +38,6 @@
       shell:
         cmd: "mkdir -p $HOME/.kube && cp -i /etc/kubernetes/admin.conf $HOME/.kube/config && chown $(id -u):$(id -g) $HOME/.kube/config"
         warn: false
-    # - name: setup kubectl env
-    #   script: scripts/setup_kubectl_env.sh
    
     - name: install calico pod network add-on
       command: kubectl apply -f /tmp/calico.yaml

@@ -536,7 +536,8 @@ ansible-playbook create_haproxy.yml
    ```
    
 4. 执行完毕后, 检查是否能够 **ping 通虚IP**. 能ping通, 说明 3 台master中有一台已经竞选称为虚IP的拥有者
-### 将控制平面域名解析至虚IP
+
+### 第六步: 将控制平面域名解析至虚IP
 
 虚IP生效后, 我们需要更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到虚IP上
 

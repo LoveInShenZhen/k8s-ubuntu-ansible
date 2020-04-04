@@ -39,11 +39,35 @@
     backup: yes
     block: |
       ip_vs
+      ip_vs_rr
+      ip_vs_wrr
+      ip_vs_sh
+      nf_conntrack_ipv4
     state: present
 
 - name: Load ip_vs kernel module
   modprobe:
     name: ip_vs
+    state: present
+
+- name: Load ip_vs_rr kernel module
+  modprobe:
+    name: ip_vs_rr
+    state: present
+
+- name: Load ip_vs_wrr kernel module
+  modprobe:
+    name: ip_vs_wrr
+    state: present
+
+- name: Load ip_vs_sh kernel module
+  modprobe:
+    name: ip_vs_sh
+    state: present
+
+- name: Load nf_conntrack_ipv4 kernel module
+  modprobe:
+    name: nf_conntrack_ipv4
     state: present
 
 - name: change to aliyun source
@@ -52,6 +76,13 @@
     dest: /etc/apt/sources.list 
     mode: u=rw,g=r,o=r
 
+  # ref: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E7%A1%AE%E4%BF%9D-iptables-%E5%B7%A5%E5%85%B7%E4%B8%8D%E4%BD%BF%E7%94%A8-nftables-%E5%90%8E%E7%AB%AF
+- name: remove nftables
+  apt:
+    pkg:
+      - nftables
+    state: absent
+    
 - name: install dependence pkgs
   apt:
     update_cache: yes
@@ -65,6 +96,8 @@
       - iptables
       - ntpdate
       - rsync
+      - ipvsadm
+      - ipset
     state: present
 
 - name: setup timezone
@@ -80,10 +113,3 @@
     hour: "3"
     minute: "0"
   notify: ntpdate sync time now
-
-  # ref: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E7%A1%AE%E4%BF%9D-iptables-%E5%B7%A5%E5%85%B7%E4%B8%8D%E4%BD%BF%E7%94%A8-nftables-%E5%90%8E%E7%AB%AF
-- name: remove nftables
-  apt:
-    pkg:
-      - nftables
-    state: absent

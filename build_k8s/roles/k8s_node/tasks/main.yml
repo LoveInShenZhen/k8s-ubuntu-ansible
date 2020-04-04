@@ -32,6 +32,8 @@
 - name: add docker-ce APT repository
   apt_repository:
     repo: "deb [arch=amd64] {{ apt.docker.apt_repository }} {{ ansible_lsb.codename }} stable"
+    state: present
+    update_cache: no
 
 - name: add k8s GPG key
   apt_key:
@@ -41,6 +43,8 @@
 - name: add k8s APT repository
   apt_repository:
     repo: "deb {{ apt.k8s.apt_repository }} kubernetes-xenial main"
+    state: present
+    update_cache: no
 
 - name: check if docker installed
   stat:
@@ -65,18 +69,10 @@
       - containerd.io
 
 - name: setup /etc/docker/daemon.json
-  json_patch:
-    src: "/etc/docker/daemon.json"
-    create: yes
-    create_type: object
-    pretty: yes
-    operations:
-      - op: add
-        path: "/registry-mirrors"
-        value: ["https://dockerhub.azk8s.cn"]
-      - op: add
-        path: "/exec-opts"
-        value: ["native.cgroupdriver=systemd"]
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: u=rw,g=r,o=r
   notify: restart docker service
 
 - name: setup /etc/sysctl.d/k8s.conf

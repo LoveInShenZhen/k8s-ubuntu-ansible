@@ -499,3 +499,264 @@ kubectl get nodes
   | --pod-network-cidr | 172.19.0.0/16 | 采用Calico网络插件时, 该设置的值要与calico.yaml中的值一致.<br /> 一致性由提供的Ansible脚本保证 |
   | --service-cidr     | 10.96.0.0/12  |                                                              |
 
+# 主机初始化的关键技术细节
+
+所有的目标主机, 在执行安装脚本前, 都要先经过**初始化设置**, 已达到作为 k8s 集群主机的基本要求.
+
+## 设置主机名
+
+* 为每个主机设置主机名, 加入集群时, 主机名会作为节点的 node_name 使用
+
+* **host_name** 变量, 是在 [**hosts**](###Ansible 的 hosts 文件) 文件中, 为每个主机单独设置的, 主机名请问重复
+
+  ```yaml
+  - name: setup hostname
+    hostname:
+      name: "{{ host_name }}" 
+  ```
+
+## 配置dns服务器
+
+* 因为需要访问外网下载镜像, 所以添加额外的dns服务器配置
+
+* 因为ubuntu采用了 systemd-resolved 作为dns服务, 修改方法请参考[这篇文章](*https://blog.csdn.net/weixin_43640082/article/details/83859885*)
+
+  ```yaml
+  - name: add dns
+    blockinfile:
+      path: /etc/systemd/resolved.conf
+      backup: yes
+      insertafter: "\\[Resolve\\]"
+      block: |
+        DNS=8.8.8.8
+      state: present
+    notify: restart systemd-resolved service
+  ```
+
+## 关闭防火墙
+
+* ubuntu 采用的是 Uncomplicated Firewall 防火墙
+
+  ```yaml
+  - name: "disable ufw [Uncomplicated Firewall]"
+    service:
+      name: ufw
+      enabled: no
+      state: stopped
+  ```
+
+## 加载并设置成自动加载 ip_vs 模块
+
+* kube-proxy 支持使用 ip_vs, 所以我们预先是所有主机都自动加载 ip_vs 模块
+
+  * 参考这边文章 [[IPVS-Based In-Cluster Load Balancing Deep Dive](https://kubernetes.io/blog/2018/07/09/ipvs-based-in-cluster-load-balancing-deep-dive/)]
+  * 技术细节请参考[官方源码文档](https://github.com/kubernetes/kubernetes/blob/master/pkg/proxy/ipvs/README.md)
+  * 但是参考这篇文章 [kube-proxy 模式对比：iptables 还是 IPVS？](https://blog.fleeto.us/post/iptables-or-ipvs/) 的末尾的 **补充：Calico 和 kube-proxy 的 iptables 比较** 这段话末尾的结论: **即使是使用 10,000 个服务和 100,000 个 Pod 的情况下，Calico 每连接执行的 iptables 规则也只是和 kube-proxy 在 20 服务 200 个 Pod 的情况基本一致** . 所以我们现在只是让所有的主机自动加载需要的ip_vs模块, 但是并没有在集群里让 kube-proxy 真正使用ip_vs mode
+  
+  ```yaml
+  - name: enable ip_vs kernel module auto loading when reboot
+    blockinfile:
+      path: /etc/modules
+      backup: yes
+      block: |
+        ip_vs
+        ip_vs_rr
+        ip_vs_wrr
+        ip_vs_sh
+        nf_conntrack_ipv4
+      state: present
+  
+  - name: Load ip_vs kernel module
+    modprobe:
+      name: ip_vs
+      state: present
+  
+  - name: Load ip_vs_rr kernel module
+    modprobe:
+      name: ip_vs_rr
+      state: present
+  
+  - name: Load ip_vs_wrr kernel module
+    modprobe:
+      name: ip_vs_wrr
+      state: present
+  
+  - name: Load ip_vs_sh kernel module
+    modprobe:
+      name: ip_vs_sh
+      state: present
+  
+  - name: Load nf_conntrack_ipv4 kernel module
+    modprobe:
+      name: nf_conntrack_ipv4
+      state: present
+  
+  ```
+
+## 修改系统使用阿里云的ubuntu源
+
+* 为了加快下载依赖软件包的速度, 改成使用阿里云的ubuntu源
+
+  ```yaml
+  - name: change to aliyun source
+    copy: 
+      src: aliyun.ubuntu.1804.source.list 
+      dest: /etc/apt/sources.list 
+      mode: u=rw,g=r,o=r
+  ```
+
+## 确保 iptables 工具不使用 nftables 后端
+
+* nftables 与当前的 kubeadm 软件包不兼容：它会导致重复防火墙规则并破坏 `kube-proxy`
+* 具体请参考[官网文档]([https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E7%A1%AE%E4%BF%9D-iptables-%E5%B7%A5%E5%85%B7%E4%B8%8D%E4%BD%BF%E7%94%A8-nftables-%E5%90%8E%E7%AB%AF](https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#确保-iptables-工具不使用-nftables-后端))
+
+
+## 安装依赖软件包
+
+* 确保如下的软件包安装在目标主机上
+
+  ```yaml
+  - name: install dependence pkgs
+    apt:
+      update_cache: yes
+      pkg:
+        - apt-transport-https
+        - ca-certificates
+        - software-properties-common
+        - curl
+        - gnupg-agent
+        - python3-pip
+        - iptables
+        - ntpdate
+        - rsync
+        - ipvsadm
+        - ipset
+    state: present
+  ```
+
+## 设置系统时区及时间(定时)同步
+
+* 集群内的所有主机的时区应该一致
+
+* 集群内的所有主机的时间应该一致(误差范围内)
+
+* 时区统一设置成 **Asia/Shanghai**
+
+* 每天凌晨03:00开始时间同步
+
+  ```yaml
+  - name: setup timezone
+    timezone:
+      hwclock: UTC
+      name: Asia/Shanghai
+    
+  - name: setup ntpdate cron task
+    cron:
+      name: ntpdate sync time daily
+      job: "ntpdate {{ ntpdate_server }}"
+      day: "*"
+      hour: "3"
+      minute: "0"
+    notify: ntpdate sync time now
+  ```
+
+## 关闭交换分区
+
+* k8s需要主机关闭交换分区.
+
+* 参考[官方文档说明](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#before-you-begin) **You MUST disable swap in order for the kubelet to work properly.**
+
+  ```yaml
+  - name: gathering swap state
+    swap_state:
+  
+  - name: disable swapoff now
+    shell: swapoff -a
+    when: host_swap_on == True
+        
+  - name: disable swapoff permanently
+    replace:
+      path: /etc/fstab
+      regexp: '^(\s*)([^#\n]+\s+)(\w+\s+)swap(\s+.*)$'
+      replace: '#\1\2\3swap\4'
+      backup: yes
+  ```
+
+
+
+## 安装 docker-ce
+
+* 需要安装 docker-ce
+
+  ```yaml
+  - name: add docker-ce GPG key
+    apt_key:
+      url: "{{ apt.docker.apt_key_url }}"
+      state: present
+  
+  - name: add docker-ce APT repository
+    apt_repository:
+      repo: "deb [arch=amd64] {{ apt.docker.apt_repository }} {{ ansible_lsb.codename }} stable"
+      
+  - name: install docker-ce pkg
+    apt:
+      pkg:
+        - docker-ce
+        - docker-ce-cli
+        - containerd.io
+  ```
+
+  
+
+## 设置 docker 服务配置文件
+
+* 设置 docker 官方image仓库的镜像站点
+
+* 设置 native.cgroupdriver=systemd 参考[官方文档:在控制平面节点上配置 kubelet 使用的 cgroup 驱动程序](https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E5%9C%A8%E6%8E%A7%E5%88%B6%E5%B9%B3%E9%9D%A2%E8%8A%82%E7%82%B9%E4%B8%8A%E9%85%8D%E7%BD%AE-kubelet-%E4%BD%BF%E7%94%A8%E7%9A%84-cgroup-%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F)
+
+  ```yaml
+  - name: setup /etc/docker/daemon.json
+    template:
+      src: daemon.json.j2
+      dest: /etc/docker/daemon.json
+      mode: u=rw,g=r,o=r
+    notify: restart docker service
+  ```
+
+  默认配置生成的 /etc/docker/daemon.json 如下:
+
+  ```json
+  {
+      "exec-opts": [
+          "native.cgroupdriver=systemd"
+      ],
+      "registry-mirrors": [
+          "https://dockerhub.azk8s.cn",
+          "https://docker.mirrors.ustc.edu.cn",
+          "https://reg-mirror.qiniu.com"
+      ]
+  }
+  ```
+
+  
+
+## 安装 kubeadm, kubectl, kubelet
+
+```yaml
+- name: add k8s GPG key
+  apt_key:
+    url: "{{ apt.k8s.apt_key_url }}"
+    state: present
+
+- name: add k8s APT repository
+  apt_repository:
+    repo: "deb {{ apt.k8s.apt_repository }} kubernetes-xenial main"
+    
+- name: install docker-ce pkg
+  apt:
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+```
+

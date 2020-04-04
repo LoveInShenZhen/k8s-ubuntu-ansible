@@ -25,7 +25,7 @@
     ha_stats_user: admin
     # haproxy stats 页面的访问的密码
     ha_stats_pwd: showmethemoney
-    
+    container_name: k8s_api_servers_haproxy
   tasks:
     - name: check parameters
       fail:
@@ -36,23 +36,47 @@
     - import_role:
         name: basic_setup
 
-    - name: install haproxy
-      apt:
-        update_cache: no
-        pkg:
-          - haproxy
+    - name: pip install docker (python package)
+      pip:
+        executable: /usr/bin/pip3
+        name: docker
         state: present
     
+    - name: mkdir -p /opt/haproxy
+      file:
+        path: /opt/haproxy
+        state: directory
+
+    - name: get container info
+      docker_container_info:
+        name: "{{ container_name }}"
+      register: ha_container
+
     - name: setup HAproxy configuration
       template:
         backup: True
         src: haproxy.cfg.j2
-        dest: /etc/haproxy/haproxy.cfg
+        dest: /opt/haproxy/haproxy.cfg
         mode: u=rw,g=r,o=r
-      notify: restart HAproxy service
+      notify: restart HAproxy container
+
+    - name: create HAproxy container
+      docker_container:
+        detach: yes
+        image: haproxy:alpine
+        name: "{{ container_name }}"
+        volumes:
+          - "/opt/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg"
+        network_mode: bridge
+        ports:
+          - "{{ service_bind_port }}:{{ service_bind_port }}"
+          - "{{ ha_stats_port }}:{{ ha_stats_port }}"
+        restart_policy: always
+        state: started
 
   handlers:
-    - name: restart HAproxy service
+    - name: restart HAproxy container
       service:
         name: haproxy
         state: restarted
+      when: ha_container.exists

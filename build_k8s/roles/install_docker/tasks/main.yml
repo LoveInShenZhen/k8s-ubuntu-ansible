@@ -1,0 +1,50 @@
+---
+# tasks file for install_docker_compose
+- import_role:
+    name: common
+
+- name: add docker-ce GPG key
+  apt_key:
+    url: "{{ apt.docker.apt_key_url }}"
+    state: present
+
+- name: add docker-ce APT repository
+  apt_repository:
+    repo: "deb [arch=amd64] {{ apt.docker.apt_repository }} {{ ansible_lsb.codename }} stable"
+    state: present
+    update_cache: no
+
+- name: check if docker installed
+  stat:
+    path: /usr/bin/docker
+  register: check_docker
+
+- name: update apt cache if docker does not installed
+  apt:
+    update_cache: yes
+  when: check_docker.stat.exists == False
+
+- name: install docker-ce pkg
+  apt:
+    pkg:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+
+- name: setup /etc/docker/daemon.json
+  template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: u=rw,g=r,o=r
+  notify: restart docker service
+
+# - name: Check if docker-compose exists
+#   stat:
+#     path: /usr/local/bin/docker-compose
+#   register: docker_compose
+
+# - name: Install docker-compose
+#   shell:
+#     cmd: 'curl -L "https://github.com/docker/compose/releases/download/1.25.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose'
+#     warn: false
+#   when: docker_compose.stat.exists == False

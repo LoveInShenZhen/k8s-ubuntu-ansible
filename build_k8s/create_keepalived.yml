@@ -6,27 +6,77 @@
     virtual_ipaddress: 192.168.3.150/24
     keepalived_router_id: 81
     keepalived_password: FE3C5A94ACDC
+    container_name: k8s_api_servers_keepalived
   tasks:
     # 进行主机的基础设置
     - import_role:
         name: basic_setup
+    
+    - import_role:
+        name: install_docker
 
-    - name: install keepalived
+    # 不使用本地的 keepalived 
+    - name: stopped keepalived service
+      service:
+        name: keepalived
+        state: stopped
+
+    - name: uninstall keepalived
       apt:
         update_cache: no
         pkg:
           - keepalived
+        state: absent
+
+    - name: pip install docker (python package)
+      pip:
+        executable: /usr/bin/pip3
+        name: docker
         state: present
+
+    - name: mkdir -p /opt/keepalived
+      file:
+        path: /opt/keepalived
+        state: directory
+
+    - name: copy Dockerfile to target host
+      copy:
+        src: keepalived.dockerfile
+        dest: /opt/keepalived/Dockerfile
+
+    - name: build keepalived image
+      docker_image:
+        name: keepalived:latest
+        source: build
+        build:
+          path: /opt/keepalived
+          pull: yes
 
     - name: setup keepalived configuration
       template:
         src: keepalived.conf.j2
-        dest: /etc/keepalived/keepalived.conf
+        dest: /opt/keepalived/keepalived.conf
         mode: u=rw,g=r,o=r
-      notify: restart keepalived service
-  
+      notify: restart keepalived container
+
+    - name: create keepalived container
+      docker_container:
+        capabilities:
+          - NET_ADMIN
+          - NET_BROADCAST
+          - NET_RAW
+        network_mode: host
+        detach: yes
+        image: keepalived:latest
+        name: "{{ container_name }}"
+        volumes:
+          - "/opt/keepalived/keepalived.conf:/etc/keepalived/keepalived.conf"
+        restart_policy: always
+        state: started
+
   handlers:
-    - name: restart keepalived service
-      service:
-        name: keepalived
-        state: restarted    
+    - name: restart keepalived container
+      docker_container:
+          name: "{{ container_name }}"
+          state: started
+          restart: yes

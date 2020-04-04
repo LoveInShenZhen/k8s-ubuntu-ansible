@@ -1,0 +1,6 @@
+---
+# handlers file for install_docker_compose
+- name: restart docker service
+  service:
+    name: docker
+    state: restarted

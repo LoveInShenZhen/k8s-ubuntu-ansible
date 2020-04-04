@@ -20,13 +20,5 @@
     - import_role:
         name: common
 
-    - name: check parameters
-      fail:
-        msg: "Please setup backend_servers parameter"
-      when: backend_servers == None or (backend_servers|count) == 0 or backend_servers[0] == '' or  backend_servers[0] == '<ip>:<port>'
-
     - debug:
-        msg: "service_bind_port = {{ service_bind_port }}"
-
-    - debug:
-        msg: "backend_servers = {{ backend_servers }}"
+        msg: "{{ docker.daemon | to_json }}"

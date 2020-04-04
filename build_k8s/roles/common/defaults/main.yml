@@ -35,3 +35,15 @@ first_master: "{{ groups['first_master'] | first }}"
 
 ntpdate_server: cn.ntp.org.cn
 
+docker:
+  # daemon.json 配置, 参考: https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
+  daemon:
+    # Docker Hub镜像服务器
+    registry-mirrors: 
+      - https://dockerhub.azk8s.cn
+      - https://docker.mirrors.ustc.edu.cn
+      - https://reg-mirror.qiniu.com
+    # 参考: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E5%9C%A8%E6%8E%A7%E5%88%B6%E5%B9%B3%E9%9D%A2%E8%8A%82%E7%82%B9%E4%B8%8A%E9%85%8D%E7%BD%AE-kubelet-%E4%BD%BF%E7%94%A8%E7%9A%84-cgroup-%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F
+    exec-opts:
+      - "native.cgroupdriver=systemd"
+

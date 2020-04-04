@@ -7,7 +7,7 @@
     # 后端服务器使用的端口, 是给下面转换的过滤器使用的, haproxy.cfg.j2 模板没有使用该变量
     backend_server_port: "{{ k8s.apiserver_bind_port }}"
     # 转换成形如: ['192.168.3.151:6443', '192.168.3.152:6443', '192.168.3.153:6443'] 的列表
-    backend_servers: "{{ ansible_play_hosts_all | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
+    backend_servers: "{{ groups['master'] | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
     # 或者采用如下的方式, 手动设置, 这样 backend_servers 可以由集群外的主机来担任
     # backend_servers:
     #   # - "<ip>:<port>"

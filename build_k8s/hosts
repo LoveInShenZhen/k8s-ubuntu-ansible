@@ -23,9 +23,8 @@ other_master
 
 # vip_interface 为虚IP所绑定的网卡设备名称
 [lb_and_ha]
-192.168.3.151 vip_interface=eth1
-192.168.3.152 vip_interface=eth1
-192.168.3.153 vip_interface=eth1
+192.168.3.154 vip_interface=eth1
+192.168.3.155 vip_interface=eth1
 
 [all:vars]
 ansible_ssh_user=root

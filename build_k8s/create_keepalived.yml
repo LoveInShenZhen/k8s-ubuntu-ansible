@@ -15,19 +15,6 @@
     - import_role:
         name: install_docker
 
-    # 不使用本地的 keepalived 
-    - name: stopped keepalived service
-      service:
-        name: keepalived
-        state: stopped
-
-    - name: uninstall keepalived
-      apt:
-        update_cache: no
-        pkg:
-          - keepalived
-        state: absent
-
     - name: pip install docker (python package)
       pip:
         executable: /usr/bin/pip3

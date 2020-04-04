@@ -169,7 +169,7 @@
       # ref: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/high-availability/#%E4%BD%BF%E7%94%A8%E5%A0%86%E6%8E%A7%E5%88%B6%E5%B9%B3%E9%9D%A2%E5%92%8C-etcd-%E8%8A%82%E7%82%B9
       # kubeadm init --control-plane-endpoint "control_plane_dns:control_plane_port" ...(略)
       control_plane_dns: k8s.cluster.local
-      control_plane_port: 7443
+      control_plane_port: 6443
       # apiserver_advertise_address: 0.0.0.0
       apiserver_bind_port: 6443
       # ref: https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/#pod-network
@@ -198,6 +198,17 @@
   
   ntpdate_server: cn.ntp.org.cn
   
+  docker:
+    # daemon.json 配置, 参考: https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file
+    daemon:
+      # Docker Hub镜像服务器
+      registry-mirrors: 
+        - https://dockerhub.azk8s.cn
+        - https://docker.mirrors.ustc.edu.cn
+        - https://reg-mirror.qiniu.com
+      # 参考: https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E5%9C%A8%E6%8E%A7%E5%88%B6%E5%B9%B3%E9%9D%A2%E8%8A%82%E7%82%B9%E4%B8%8A%E9%85%8D%E7%BD%AE-kubelet-%E4%BD%BF%E7%94%A8%E7%9A%84-cgroup-%E9%A9%B1%E5%8A%A8%E7%A8%8B%E5%BA%8F
+      exec-opts:
+        - "native.cgroupdriver=systemd"
   
   ```
 
@@ -206,7 +217,7 @@
   | 参数                      | 说明                                                         |
   | ------------------------- | ------------------------------------------------------------ |
   | k8s.control_plane_dns     | 控制平面的域名                                               |
-  | k8s.control_plane_port    | 控制平面的端口, 为了让 master 的主机上可以运行**k8s_api_server负载均衡服务**, 则将此端口设置成一个与**k8s.apiserver_bind_port**不同的值<br />如果是 **单master** 模式下的集群, 实际上就不需要**k8s_api_server负载均衡服务**, 可以设置的与**k8s.apiserver_bind_port** 一致 |
+  | k8s.control_plane_port    | 控制平面的端口.<br />如果我们希望在 master 的主机上可以运行**控制平面的负载均衡服务**, 则需要将此端口设置成一个与**k8s.apiserver_bind_port**不同的值<br /><br />如果是 **单master** 模式下的集群, 实际上就不需要**控制平面的负载均衡服务**, 可以设置的与**k8s.apiserver_bind_port** 一致.<br /><br />在下文中的案例描述里, 我们演示的过程是从**单master集群**变化成**3master集群**, 控制平面服务的高可用和负载均衡, 我们不放在master的机器上部署,而是选择2台worker主机来做一主一备方式的HA+LB的方式, 所以控制平面的端口就一开始按照单master的方式, 设置成与**k8s.apiserver_bind_port**, 默认 6443 |
   | k8s.apiserver_bind_port   | k8s_api_server 服务的端口,一般不做修改,默认 6443, 请参考 kubeadm init 的 **--apiserver-bind-port** 参数 |
   | k8s.pod_network_cidr      | 请参考 kubeadm init 命令的 **--pod-network-cidr** 参数       |
   | k8s.service_cidr          | 请参考 kubeadm init 命令的 **--service-cidr** 参数           |
@@ -228,94 +239,17 @@
 
 > 进入到脚本源码中的 **build_k8s** 目录 (即hosts 文件所在的目录)
 
-### 为所有的目标主机执行初始化设置
+### 第一步: 为所有的目标主机执行初始化设置
 
 ```bash
 ansible-playbook prepare_all_host.yml
 ```
 
-### 将 3 个 master 组成负载均衡
+### 第二步: 先创建一个单 master 的集群
 
-> 注: 单master节点模式不需要执行此步骤
-1. 检查 **create_haproxy.yml** 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
+1. 检查[**全局配置文件**](###全局配置文件) 中的 **k8s.control_plane_port**, 我们使用默认值: 6443
 
-   ```yaml
-   ---
-   - name: Create a load blance using HAproxy
-     hosts: lb_and_ha
-     vars:
-       # 负载均衡对外提供服务的端口
-       service_bind_port: "{{ k8s.control_plane_port }}"
-       # 后端服务器使用的端口, 是给下面转换的过滤器使用的, haproxy.cfg.j2 模板没有使用该变量
-       backend_server_port: "{{ k8s.apiserver_bind_port }}"
-       # 转换成形如: ['192.168.3.151:6443', '192.168.3.152:6443', '192.168.3.153:6443'] 的列表
-       backend_servers: "{{ ansible_play_hosts_all | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
-       # 或者采用如下的方式, 手动设置, 这样 backend_servers 可以由集群外的主机来担任
-       # backend_servers:
-       #   # - "<ip>:<port>"
-       #   - "192.168.3.151:6443"
-       #   - "192.168.3.152:6443"
-       #   - "192.168.3.153:6443"
-   
-       # 是否开启 haproxy stats 页面
-       ha_stats_enable: True
-       # haproxy stats 页面的服务端口
-       ha_stats_port: 1936
-       # haproxy stats 页面的 url
-       ha_stats_url: /haproxy_stats
-       # haproxy stats 页面的访问的用户名
-       ha_stats_user: admin
-       # haproxy stats 页面的访问的密码
-       ha_stats_pwd: showmethemoney
-       
-     tasks:
-       - name: check parameters
-         fail:
-           msg: "Please setup backend_servers parameter"
-         when: backend_servers == None or (backend_servers|count) == 0 or backend_servers[0] == '' or  backend_servers[0] == '<ip>:<port>'
-   
-         # 进行主机的基础设置
-       - import_role:
-           name: basic_setup
-   
-       - name: install haproxy
-         apt:
-           update_cache: no
-           pkg:
-             - haproxy
-           state: present
-       
-       - name: setup HAproxy configuration
-         template:
-           backup: True
-           src: haproxy.cfg.j2
-           dest: /etc/haproxy/haproxy.cfg
-           mode: u=rw,g=r,o=r
-         notify: restart HAproxy service
-   
-     handlers:
-       - name: restart HAproxy service
-         service:
-           name: haproxy
-           state: restarted
-   ```
-
-   
-
-2. 在3个master上创建负载均衡服务
-
-```bash
-ansible-playbook create_haproxy.yml
-```
-
-3. 脚本运行完毕后, 我们可以在其中一台master机器上, 查看 haproxy 的监控页面, 例如: master-1 ip: 192.168.3.151
-   http://192.168.3.151:1936/haproxy_stats
-
-   ![haproxy stats](https://kklongming.github.io/res/images/haproxy_stats.jpg)
-
-### 初始化,创建第一个Master节点
-
-1. 更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到第一个Master节点的IP地址上
+1. 更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到 **第一个master节点** 的IP地址上
 
    > 为什么?
    >
@@ -326,7 +260,7 @@ ansible-playbook create_haproxy.yml
    * 通过 **-e** "key1=value1  key2=value2 ..." 方式传参
    * 需要指定 **domain_name** 和 **domain_ip** 2个参数
    * **domain_name** 为控制平面域名, 请根据制定的网络规划进行赋值
-   * **domain_ip** 为控制域名解析的目标IP, 这里我们指定为**第一个Master**的IP
+   * **domain_ip** 为控制域名解析的目标IP, 这里我们指定为**第一个master**的IP
 
    ```bash
    ansible-playbook set_hosts.yml -e "domain_name=k8s.cluster.local domain_ip=192.168.3.151"
@@ -363,10 +297,10 @@ ansible-playbook create_haproxy.yml
    
    To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.
    ```
-   
-   
 
-### 添加其他的节点 master 到集群
+
+
+### 第三步: 添加其他的节点到集群
 
 执行脚本, 添加 **其他的 master 节点**和 **worker节点**到集群
 
@@ -380,17 +314,133 @@ ansible-playbook --forks 1 add_other_node_to_cluster.yml
 
 ```bash
 root@master-2:~# kubectl get nodes
-NAME       STATUS   ROLES    AGE   VERSION
-master-1   Ready    master   61m   v1.18.0
-master-2   Ready    master   26m   v1.18.0
-master-3   Ready    master   48m   v1.18.0
-work-1     Ready    <none>   46m   v1.18.0
-work-2     Ready    <none>   46m   v1.18.0
+NAME       STATUS     ROLES    AGE     VERSION
+master-1   Ready      master   9m13s   v1.18.0
+master-2   NotReady   master   4m5s    v1.18.0
+master-3   NotReady   master   2m21s   v1.18.0
+work-1     NotReady   <none>   110s    v1.18.0
+work-2     NotReady   <none>   107s    v1.18.0
 ```
 
 
 
-### 将 3 个 master配置成高可用
+### 第四步: 将 3 个 master 组成负载均衡
+> 注: 单master节点模式不需要执行此步骤
+
+完成了 **第三步** 之后, 集群已经运行起来了. 只不过, 由于 **控制平面的域名** 是解析到 **第一个 master 的IP** 上的, 所以现在虽然有3台master在集群, 但是只有第一个master才能够通过**控制平面的域名**提供k8s集群的api_server服务.
+
+下面, 我们选择2台除master节点之外的主机(可以是 worker 主机, 也可以是额外的2台主机), 创建一套一主一备形式的 **负载均衡** + **高可用**
+
+1. 检查主机清单文件: hosts 中的 **[lb_and_ha]** 的2台主机的 **IP地址** 与 **需要绑定虚IP的网卡设备名称** 是否设置正确
+
+   ```ini
+   # vip_interface 为虚IP所绑定的网卡设备名称
+   [lb_and_ha]
+   192.168.3.154 vip_interface=eth0
+   192.168.3.155 vip_interface=eth0
+   ```
+
+2. 检查 **create_haproxy.yml** 配置, 文件sample 如下, 文件中的配置以下文的 *[案例描述](#案例描述)* 为例:
+
+   ```yaml
+   ---
+   - name: Create a load blance using HAproxy
+     hosts: lb_and_ha
+     vars:
+       # 负载均衡对外提供服务的端口
+       service_bind_port: "{{ k8s.control_plane_port }}"
+       # 后端服务器使用的端口, 是给下面转换的过滤器使用的, haproxy.cfg.j2 模板没有使用该变量
+       backend_server_port: "{{ k8s.apiserver_bind_port }}"
+       # 转换成形如: ['192.168.3.154:6443', '192.168.3.155:6443'] 的列表
+       backend_servers: "{{ ansible_play_hosts_all | map('regex_replace', '^(.*)$',  '\\1:' + backend_server_port) | list }}"
+       # 或者采用如下的方式, 手动设置, 这样 backend_servers 可以由集群外的主机来担任
+       # backend_servers:
+       #   # - "<ip>:<port>"
+       #   - "192.168.3.154:6443"
+       #   - "192.168.3.155:6443"
+   
+       # 是否开启 haproxy stats 页面
+       ha_stats_enable: True
+       # haproxy stats 页面的服务端口
+       ha_stats_port: 1936
+       # haproxy stats 页面的 url
+       ha_stats_url: /haproxy_stats
+       # haproxy stats 页面的访问的用户名
+       ha_stats_user: admin
+       # haproxy stats 页面的访问的密码
+       ha_stats_pwd: showmethemoney
+       container_name: k8s_api_servers_haproxy
+     tasks:
+       - name: check parameters
+         fail:
+           msg: "Please setup backend_servers parameter"
+         when: backend_servers == None or (backend_servers|count) == 0 or backend_servers[0] == '' or  backend_servers[0] == '<ip>:<port>'
+   
+         # 进行主机的基础设置
+       - import_role:
+           name: basic_setup
+   
+       - name: pip install docker (python package)
+         pip:
+           executable: /usr/bin/pip3
+           name: docker
+           state: present
+       
+       - name: mkdir -p /opt/haproxy
+         file:
+           path: /opt/haproxy
+           state: directory
+   
+       - name: get container info
+         docker_container_info:
+           name: "{{ container_name }}"
+         register: ha_container
+   
+       - name: setup HAproxy configuration
+         template:
+           backup: True
+           src: haproxy.cfg.j2
+           dest: /opt/haproxy/haproxy.cfg
+           mode: u=rw,g=r,o=r
+         notify: restart HAproxy container
+   
+       - name: create HAproxy container
+         docker_container:
+           detach: yes
+           image: haproxy:alpine
+           name: "{{ container_name }}"
+           volumes:
+             - "/opt/haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg"
+           network_mode: bridge
+           ports:
+             - "{{ service_bind_port }}:{{ service_bind_port }}"
+             - "{{ ha_stats_port }}:{{ ha_stats_port }}"
+           restart_policy: always
+           state: started
+   
+     handlers:
+       - name: restart HAproxy container
+         docker_container:
+           name: "{{ container_name }}"
+           state: started
+           restart: yes
+         when: ha_container.exists
+   ```
+
+   
+
+2. 在2台worker上创建负载均衡服务
+
+```bash
+ansible-playbook create_haproxy.yml
+```
+
+3. 脚本运行完毕后, 我们可以在其中一台机器上, 查看 haproxy 的监控页面, 例如: 192.168.3.155
+   http://192.168.3.155:1936/haproxy_stats , 访问密码为 create_haproxy.yml 中 **ha_stats_pwd** 的值
+
+   ![haproxy stats](https://kklongming.github.io/res/images/haproxy_stats.png)
+
+### 第五步: 将 3 个 master配置成高可用, 虚IP生效
 
 现在集群已经创建完毕, 但是 **控制平面的域名** 还是指向 master-1. 接着我们需要将3个master 配置成高可用模式, 让 **3个master的 虚IP** 生效
 
@@ -403,32 +453,76 @@ work-2     Ready    <none>   46m   v1.18.0
      vars:
        # 虚IP
        virtual_ipaddress: 192.168.3.150/24
-       keepalived_router_id: 81
+       keepalived_router_id: 99
        keepalived_password: FE3C5A94ACDC
+       container_name: k8s_api_servers_keepalived
      tasks:
        # 进行主机的基础设置
        - import_role:
            name: basic_setup
+       
+       - import_role:
+           name: install_docker
    
-       - name: install keepalived
-         apt:
-           update_cache: no
-           pkg:
-             - keepalived
+       - name: pip install docker (python package)
+         pip:
+           executable: /usr/bin/pip3
+           name: docker
            state: present
+   
+       - name: mkdir -p /opt/keepalived
+         file:
+           path: /opt/keepalived
+           state: directory
+   
+       - name: get container info
+         docker_container_info:
+           name: "{{ container_name }}"
+         register: the_container
+   
+       - name: copy Dockerfile to target host
+         copy:
+           src: keepalived.dockerfile
+           dest: /opt/keepalived/Dockerfile
+   
+       - name: build keepalived image
+         docker_image:
+           name: keepalived:latest
+           source: build
+           build:
+             path: /opt/keepalived
+             pull: yes
    
        - name: setup keepalived configuration
          template:
            src: keepalived.conf.j2
-           dest: /etc/keepalived/keepalived.conf
+           dest: /opt/keepalived/keepalived.conf
            mode: u=rw,g=r,o=r
-         notify: restart keepalived service
-     
+         notify: restart keepalived container
+   
+       - name: create keepalived container
+         docker_container:
+           capabilities:
+             - NET_ADMIN
+             - NET_BROADCAST
+             - NET_RAW
+           network_mode: host
+           detach: yes
+           image: keepalived:latest
+           name: "{{ container_name }}"
+           volumes:
+             - "/opt/keepalived/keepalived.conf:/etc/keepalived/keepalived.conf"
+           restart_policy: always
+           state: started
+   
      handlers:
-       - name: restart keepalived service
-         service:
-           name: keepalived
-           state: restarted    
+       - name: restart keepalived container
+         docker_container:
+           name: "{{ container_name }}"
+           state: started
+           restart: yes
+         when: the_container.exists
+   
    ```
    
 2. 确定 **虚IP** 配置项 **virtual_ipaddress** 与规划的一致

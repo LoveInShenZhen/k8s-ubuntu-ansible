@@ -67,7 +67,7 @@
   * 多 master 集群模式 (多个 master 组成 **负载均衡** + **高可用**)
 * 确定 [**控制平面**](https://kubernetes.io/zh/docs/concepts/#kubernetes-%E6%8E%A7%E5%88%B6%E9%9D%A2) 的**域名**, **IP地址**, **端口**
   * 控制平面的IP地址, 在高可用的模式下, 为高可用服务的 **虚IP**. 在单master节点的模式下, 为 master 的IP地址
-  * 多 master 集群模式下, 如果控制平面使用的端口与k8s_api_server使用的端口相同(默认:6443), 则负载均衡服务不能够与master运行在同一台主机上, 否则会出现端口冲突. 在此情况下, 可以选择另外的worker主机运行负载均衡服务. 或者更改控制平面的端口为其他值,例如:7443. 但是, 这种方式下, 需要在开始创建集群之前, 先在3台master上搭建好 负载均衡+高可用 服务.
+  * 多 master 集群模式下, 如果控制平面使用的端口与 **kube-apiserverer** 使用的端口相同(默认:6443), 则负载均衡服务不能够与master运行在同一台主机上, 否则会出现端口冲突. 在此情况下, 可以选择另外的worker主机运行负载均衡服务. 或者更改控制平面的端口为其他值,例如:7443. 但是, 这种方式下, 需要在开始创建集群之前, 先在3台master上搭建好 负载均衡+高可用 服务.
   * 在所有的目标主机上 **/etc/hosts** 文件里添加一条 **控制平面域名** 到IP的解析记录
 * 确定k8s集群中, pod 使用的网段, 一般来说,只要和目标主机不在同一个网段即可.
 * 确定k8s集群中, service 使用的网段, 不能和目标主机以及pod使用的网络在同一网段
@@ -134,7 +134,7 @@
   | first_master | 创建集群时的第一个 Master                                    |
   | other_master | 要加入到现有集群的其他 Master. 如果是 **单master** 模式下, 该组成员为空 |
   | worker       | k8s集群工作节点, 用于运行负载pod                             |
-  | lb_and_ha    | 用于运行 **k8s_api_server负载均衡服务** + **高可用** 的节点  |
+  | lb_and_ha    | 用于运行 **k8s_kube-apiserverer负载均衡服务** + **高可用** 的节点 |
 
 * 请根据网络规划, 修改分组中的主机的 **ip**, **host_name**
 
@@ -218,7 +218,7 @@
   | ------------------------- | ------------------------------------------------------------ |
   | k8s.control_plane_dns     | 控制平面的域名                                               |
   | k8s.control_plane_port    | 控制平面的端口.<br />如果我们希望在 master 的主机上可以运行**控制平面的负载均衡服务**, 则需要将此端口设置成一个与**k8s.apiserver_bind_port**不同的值<br /><br />如果是 **单master** 模式下的集群, 实际上就不需要**控制平面的负载均衡服务**, 可以设置的与**k8s.apiserver_bind_port** 一致.<br /><br />在下文中的案例描述里, 我们演示的过程是从**单master集群**变化成**3master集群**, 控制平面服务的高可用和负载均衡, 我们不放在master的机器上部署,而是选择2台worker主机来做一主一备方式的HA+LB的方式, 所以控制平面的端口就一开始按照单master的方式, 设置成与**k8s.apiserver_bind_port**, 默认 6443 |
-  | k8s.apiserver_bind_port   | k8s_api_server 服务的端口,一般不做修改,默认 6443, 请参考 kubeadm init 的 **--apiserver-bind-port** 参数 |
+  | k8s.apiserver_bind_port   | kube-apiserverer 服务的端口,一般不做修改,默认 6443, 请参考 kubeadm init 的 **--apiserver-bind-port** 参数 |
   | k8s.pod_network_cidr      | 请参考 kubeadm init 命令的 **--pod-network-cidr** 参数       |
   | k8s.service_cidr          | 请参考 kubeadm init 命令的 **--service-cidr** 参数           |
   | k8s.service_dns_domain    | 请参考 kubeadm init 命令的 **--service-dns-domain** 参数     |
@@ -253,7 +253,7 @@ ansible-playbook prepare_all_host.yml
 
    > 为什么?
    >
-   > * 在创建集群, 向集群添加节点的过程, 我们需要保证通过 **控制平面域名**+**控制平面端口** 的方式, 可以访问到master的api_server服务. 所以在集群的创建的过程中, 先暂时将控制平面域名解析到第一个Master 节点
+   > * 在创建集群, 向集群添加节点的过程, 我们需要保证通过 **控制平面域名**+**控制平面端口** 的方式, 可以访问到master的kube-apiserverer服务. 所以在集群的创建的过程中, 先暂时将控制平面域名解析到第一个Master 节点
    > * 等待其余的2个master都加入到集群后, 再将3个master配置成高可用, 控制平面的虚IP生效后, 再更新所有节点的 **/etc/hosts**, 将控制平面的域名解析到虚IP.
 
 2. 执行以下命令进行更新控制平面域名解析操作, 注意下面示例中的传参方式
@@ -266,13 +266,13 @@ ansible-playbook prepare_all_host.yml
    ansible-playbook set_hosts.yml -e "domain_name=k8s.cluster.local domain_ip=192.168.3.151"
    ```
 
-3. 执行脚本, 开始创建第一个Master节点
+3. 执行脚本, 开始创建第一个master节点
 
    ```baseh
    ansible-playbook create_first_master_for_cluster.yml
    ```
 
-4. 脚本执行完成后, 第一个Master应该顺利启动了, ssh到 **master-1** 上执行以下命令, 查看集群节点信息:
+4. 脚本执行完成后, 第一个master应该顺利启动了, ssh到 **master-1** 上执行以下命令, 查看集群节点信息:
 
    ```bash
    kubectl get nodes
@@ -324,11 +324,11 @@ work-2     NotReady   <none>   107s    v1.18.0
 
 
 
-### 第四步: 创建2台负载均衡, 代理后面3台master的api_server服务
+### 第四步: 创建2台负载均衡, 代理后面3台master的kube-apiserverer服务
 
 > 注: 单master节点模式不需要执行此步骤
 
-完成了 **第三步** 之后, 集群已经运行起来了. 只不过, 由于 **控制平面的域名** 是解析到 **第一个 master 的IP** 上的, 所以现在虽然有3台master在集群, 但是只有第一个master才能够通过**控制平面的域名**提供k8s集群的api_server服务.
+完成了 **第三步** 之后, 集群已经运行起来了. 只不过, 由于 **控制平面的域名** 是解析到 **第一个 master 的IP** 上的, 所以现在虽然有3台master在集群, 但是只有第一个master才能够通过**控制平面的域名**提供k8s集群的 **kube-apiserverer** 服务.
 
 下面, 我们选择2台除master节点之外的主机(可以是 worker 主机, 也可以是额外的2台主机), 创建一套一主一备形式的 **负载均衡** + **高可用**
 
@@ -370,7 +370,7 @@ work-2     NotReady   <none>   107s    v1.18.0
        ha_stats_user: admin
        # haproxy stats 页面的访问的密码
        ha_stats_pwd: showmethemoney
-       container_name: k8s_api_servers_haproxy
+       container_name: k8s_kube-apiserverers_haproxy
      tasks:
        - name: check parameters
          fail:
@@ -456,7 +456,7 @@ ansible-playbook create_haproxy.yml
        virtual_ipaddress: 192.168.3.150/24
        keepalived_router_id: 99
        keepalived_password: FE3C5A94ACDC
-       container_name: k8s_api_servers_keepalived
+       container_name: k8s_kube-apiserverers_keepalived
      tasks:
        # 进行主机的基础设置
        - import_role:
@@ -554,7 +554,7 @@ ansible-playbook set_hosts.yml -e "domain_name=k8s.cluster.local domain_ip=192.1
 
 在节点主机对控制平面域名进行 ping 测试, 验证域名已正确解析到虚IP上.
 
-在master节点主机上, 执行命令, 检查是否能正常查看节点信息 (kubectl 命令会通过控制平面域名和端口来访问控制平面的 api_server):
+在master节点主机上, 执行命令, 检查是否能正常查看节点信息 (kubectl 命令会通过控制平面域名和端口来访问控制平面的 kube-apiserverer):
 
 ```bash
 kubectl get nodes

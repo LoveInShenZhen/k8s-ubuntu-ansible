@@ -536,7 +536,7 @@ ansible-playbook create_haproxy.yml
    ansible-playbook create_keepalived.yml
    ```
    
-4. 执行完毕后, 检查是否能够 **ping 通虚IP**. 能ping通, 说明 3 台master中有一台已经竞选称为虚IP的拥有者
+4. 执行完毕后, 检查是否能够 **ping 通虚IP**. 能ping通, 说明主备模式下的虚IP已经生效
 
 ### 第六步: 将控制平面域名解析至虚IP
 

@@ -4,7 +4,7 @@
   vars:
     # 虚IP
     virtual_ipaddress: 192.168.3.150/24
-    keepalived_router_id: 81
+    keepalived_router_id: 99
     keepalived_password: FE3C5A94ACDC
     container_name: k8s_api_servers_keepalived
   tasks:
@@ -38,6 +38,11 @@
       file:
         path: /opt/keepalived
         state: directory
+
+    - name: get container info
+      docker_container_info:
+        name: "{{ container_name }}"
+      register: the_container
 
     - name: copy Dockerfile to target host
       copy:
@@ -77,6 +82,7 @@
   handlers:
     - name: restart keepalived container
       docker_container:
-          name: "{{ container_name }}"
-          state: started
-          restart: yes
+        name: "{{ container_name }}"
+        state: started
+        restart: yes
+      when: the_container.exists

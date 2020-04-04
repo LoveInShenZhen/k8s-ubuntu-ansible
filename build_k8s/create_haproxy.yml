@@ -76,7 +76,8 @@
 
   handlers:
     - name: restart HAproxy container
-      service:
-        name: haproxy
-        state: restarted
+      docker_container:
+        name: "{{ container_name }}"
+        state: started
+        restart: yes
       when: ha_container.exists

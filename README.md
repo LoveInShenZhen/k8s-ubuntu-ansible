@@ -706,8 +706,7 @@ kubectl get nodes
 ## 确保 iptables 工具不使用 nftables 后端
 
 * nftables 与当前的 kubeadm 软件包不兼容：它会导致重复防火墙规则并破坏 `kube-proxy`
-* 具体请参考[官网文档]([https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%E7%A1%AE%E4%BF%9D-iptables-%E5%B7%A5%E5%85%B7%E4%B8%8D%E4%BD%BF%E7%94%A8-nftables-%E5%90%8E%E7%AB%AF](https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#确保-iptables-工具不使用-nftables-后端))
-
+* 具体请参考: [官网文档](https://kubernetes.io/zh/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#%e7%a1%ae%e4%bf%9d-iptables-%e5%b7%a5%e5%85%b7%e4%b8%8d%e4%bd%bf%e7%94%a8-nftables-%e5%90%8e%e7%ab%af)
 
 ## 安装依赖软件包
 

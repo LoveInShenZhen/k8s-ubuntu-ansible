@@ -438,7 +438,7 @@ ansible-playbook create_haproxy.yml
 3. 脚本运行完毕后, 我们可以在其中一台机器上, 查看 haproxy 的监控页面, 例如: 192.168.3.155
    http://192.168.3.155:1936/haproxy_stats , 访问密码为 create_haproxy.yml 中 **ha_stats_pwd** 的值
 
-   ![haproxy stats](https://kklongming.github.io/res/images/haproxy_stats.png)
+   ![haproxy](https://kklongming.github.io/res/images/haproxy_stats.png)
 
 ### 第五步: 将 3 个 master配置成高可用, 虚IP生效
 
@@ -854,4 +854,6 @@ kubectl get nodes
       - docker-ce-cli
       - containerd.io
 ```
+
+
 

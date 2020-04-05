@@ -1,3 +1,5 @@
+# 用Ansible 自动化搭建本地Kubernetes集群
+
 # 目标要求
 
 * 通过ansible脚本, 降低安装部署一套k8s集群的工作难度
@@ -211,27 +213,38 @@
   ```
 
 * 配置参数说明
-
-  | 参数                      | 说明                                                         |
-  | ------------------------- | ------------------------------------------------------------ |
-  | k8s.control_plane_dns     | 控制平面的域名                                               |
-  | k8s.control_plane_port    | 控制平面的端口.<br />如果我们希望在 master 的主机上可以运行**控制平面的负载均衡服务**, 则需要将此端口设置成一个与**k8s.apiserver_bind_port**不同的值<br /><br />如果是 **单master** 模式下的集群, 实际上就不需要**控制平面的负载均衡服务**, 可以设置的与**k8s.apiserver_bind_port** 一致.<br /><br />在下文中的案例描述里, 我们演示的过程是从**单master集群**变化成**3master集群**, 控制平面服务的高可用和负载均衡, 我们不放在master的机器上部署,而是选择2台worker主机来做一主一备方式的HA+LB的方式, 所以控制平面的端口就一开始按照单master的方式, 设置成与**k8s.apiserver_bind_port**, 默认 6443 |
-  | k8s.apiserver_bind_port   | kube-apiserverer 服务的端口,一般不做修改,默认 6443, 请参考 kubeadm init 的 **--apiserver-bind-port** 参数 |
-  | k8s.pod_network_cidr      | 请参考 kubeadm init 命令的 **--pod-network-cidr** 参数       |
-  | k8s.service_cidr          | 请参考 kubeadm init 命令的 **--service-cidr** 参数           |
-  | k8s.service_dns_domain    | 请参考 kubeadm init 命令的 **--service-dns-domain** 参数     |
-  | k8s.image_repository      | 请参考 kubeadm init 命令的 **--image-repository** 参数<br />通过设置此参数, 安装过程就不会从默认的 k8s.gcr.io 仓库下载镜像了, 解决了 k8s.gcr.io 仓库被墙的问题.<br />我们的参数配置,使用了 [Aliyun (Alibaba Cloud) Container Service](https://github.com/AliyunContainerService/sync-repo)  提供的镜像仓库<br />[**--image-repository** 参数使用请参考这篇文章](https://www.jianshu.com/p/d42ef0eff63f) |
-  |                           |                                                              |
-  | apt.docker.apt_key_url    | Docker’s official GPG key.                                   |
-  | apt.docker.apt_repository | Docker’s official repository 请参考[官方文档:ununtu下安装docker-ce](https://docs.docker.com/install/linux/docker-ce/ubuntu/) |
-  |                           |                                                              |
-  | apt.k8s.apt_key_url       | Kubernetes 镜像源 GPG key                                    |
-  | apt.k8s.apt_repository    | Kubernetes 镜像源, 参考: [阿里巴巴Kubernetes 镜像源](https://developer.aliyun.com/mirror/kubernetes?spm=a2c6h.13651102.0.0.3e221b11QiMILB) |
-  |                           | 使用镜像源, 是为了解决被墙的问题                             |
-  |                           |                                                              |
-  | ntpdate_server            | 时间同步服务器域名                                           |
-
-
+  * k8s.control_plane_dns
+    * 控制平面的域名
+  * k8s.control_plane_port
+    * 控制平面的端口.
+    * 如果我们希望在 master 的主机上可以运行**控制平面的负载均衡服务**, 则需要将此端口设置成一个与**k8s.apiserver_bind_port**不同的值
+    * 如果是 **单master** 模式下的集群, 实际上就不需要**控制平面的负载均衡服务**, 可以设置的与**k8s.apiserver_bind_port** 一致.
+    * 在下文中的案例描述里, 我们演示的过程是从**单master集群**变化成**3master集群**, 控制平面服务的高可用和负载均衡, 我们不放在master的机器上部署,而是选择2台worker主机来做一主一备方式的HA+LB的方式, 所以控制平面的端口就一开始按照单master的方式, 设置成与**k8s.apiserver_bind_port**, 默认 6443
+  * k8s.apiserver_bind_port
+    * kube-apiserverer 服务的端口,一般不做修改,默认 6443, 请参考 kubeadm init 的 **--apiserver-bind-port** 参数
+  * k8s.pod_network_cidr
+    * 请参考 kubeadm init 命令的 **--pod-network-cidr** 参数
+  * k8s.service_cidr
+    * 请参考 kubeadm init 命令的 **--service-cidr** 参数
+  * k8s.service_dns_domain
+    * 请参考 kubeadm init 命令的 **--service-dns-domain** 参数
+  * k8s.image_repository
+    * 请参考 kubeadm init 命令的 **--image-repository** 参数
+    * 通过设置此参数, 安装过程就不会从默认的 k8s.gcr.io 仓库下载镜像了, 解决了 k8s.gcr.io 仓库被墙的问题.
+    * 我们的参数配置,使用了 [Aliyun (Alibaba Cloud) Container Service](https://github.com/AliyunContainerService/sync-repo)  提供的镜像仓库
+    * [**--image-repository** 参数使用请参考这篇文章](https://www.jianshu.com/p/d42ef0eff63f)
+  * apt.docker.apt_key_url
+    * Docker’s official GPG key.
+  * apt.docker.apt_repository
+    * Docker’s official repository 请参考[官方文档:ununtu下安装docker-ce](https://docs.docker.com/install/linux/docker-ce/ubuntu/)
+  * apt.k8s.apt_key_url
+    * Kubernetes 镜像源 GPG key
+  * apt.k8s.apt_repository
+    * Kubernetes 镜像源, 参考: [阿里巴巴Kubernetes 镜像源](https://developer.aliyun.com/mirror/kubernetes?spm=a2c6h.13651102.0.0.3e221b11QiMILB)
+    * 使用镜像源, 是为了解决被墙的问题
+  * ntpdate_server
+    * 时间同步服务器域名
+  
 
 ## 分阶段执行脚本
 

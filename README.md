@@ -863,10 +863,17 @@ kubectl get nodes
 
 ## Kubernetes Dashboard
 
+* Kubernetes Dashboard 是 Kubernetes 的官方 Web UI. 使用 Kubernetes Dashboard，您可以：
+  * 向 Kubernetes 集群部署容器化应用
+  * 诊断容器化应用的问题
+  * 管理集群的资源
+  * 查看集群上所运行的应用程序
+  * 创建、修改Kubernetes 上的资源（例如 Deployment、Job、DaemonSet等）
+  * 展示集群上发生的错误
 * 安装过程请参考 [**官方文档**](https://kubernetes.io/zh/docs/tasks/access-application-cluster/web-ui-dashboard/)
 * [Kubernetes Dashboard github](https://github.com/kubernetes/dashboard)
 
 ## Kuboard
 
-* Kuboard 是基于 Kubernetes 的微服务管理界面. [**官网**](https://kuboard.cn/)
+* Kuboard 是 Kubernetes 的一款图形化管理界面. 详情请访问 [**官网**](https://kuboard.cn/)
 * [安装教程](https://kuboard.cn/install/install-dashboard.html)

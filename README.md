@@ -118,7 +118,6 @@
   192.168.3.152 vip_interface=eth1
   192.168.3.153 vip_interface=eth1
   
-  
   [all:vars]
   ansible_ssh_user=root
   ansible_ssh_private_key_file=<请替换成你的root用户证书>
@@ -187,7 +186,6 @@
       k8s:
           apt_key_url: https://mirrors.aliyun.com/kubernetes/apt/doc/apt-key.gpg
           apt_repository: https://mirrors.aliyun.com/kubernetes/apt/
-  
   
   # master 节点个数
   master_count: "{{ groups['master'] | length }}"

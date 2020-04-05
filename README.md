@@ -315,7 +315,7 @@ ansible-playbook prepare_all_host.yml
 
 执行脚本, 添加 **其他的 master 节点**和 **worker节点**到集群
 
-> 注:  添加 **--forks 1** 以便一台一台的加. 因为测试中发现, 并行添加的时候, 有一定概率出现因ETCD发生重新选举而导致添加Master失败, 更多数量的同步更加因硬件资源有限, 没有测试过.
+> 注:  添加 **--forks 1** 以便一台一台的加. 因为测试中发现, 并行添加的时候, 有一定概率出现因ETCD发生重新选举而导致添加Master失败, 更多数量(超过4台)的主机的同时加入集群的情况, 因为硬件资源有限, 没有测试过.
 
 ```bash
 ansible-playbook --forks 1 add_other_node_to_cluster.yml

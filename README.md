@@ -859,3 +859,14 @@ kubectl get nodes
 
 
 
+# 安装图形化集群管理工具
+
+## Kubernetes Dashboard
+
+* 安装过程请参考 [**官方文档**](https://kubernetes.io/zh/docs/tasks/access-application-cluster/web-ui-dashboard/)
+* [Kubernetes Dashboard github](https://github.com/kubernetes/dashboard)
+
+## Kuboard
+
+* Kuboard 是基于 Kubernetes 的微服务管理界面. [**官网**](https://kuboard.cn/)
+* [安装教程](https://kuboard.cn/install/install-dashboard.html)
